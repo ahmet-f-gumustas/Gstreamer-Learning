@@ -538,4 +538,68 @@ int main(int argc, char *argv[]) {
     /* READY durumuna geçiş */
     g_print("Pipeline READY durumuna getiriliyor...\n");
     ret = gst_element_set_state(pipeline, GST_STATE_READY);
-    if
+    if (ret == GST_STATE_CHANGE_FAILURE) {
+        g_printerr("Pipeline READY durumuna getirilemedi.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* Pipeline'ın mevcut durumunu al */
+    GstState current, pending;
+    ret = gst_element_get_state(pipeline, &current, &pending, GST_CLOCK_TIME_NONE);
+    g_print("Mevcut durum: %s, Bekleyen durum: %s\n", 
+            gst_element_state_get_name(current), 
+            gst_element_state_get_name(pending));
+    
+    /* PAUSED durumuna geçiş */
+    g_print("Pipeline PAUSED durumuna getiriliyor...\n");
+    ret = gst_element_set_state(pipeline, GST_STATE_PAUSED);
+    if (ret == GST_STATE_CHANGE_FAILURE) {
+        g_printerr("Pipeline PAUSED durumuna getirilemedi.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* PAUSED durumuna geçişin tamamlanmasını bekle */
+    ret = gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
+    g_print("PAUSED durumuna geçiş tamamlandı\n");
+    
+    /* PLAYING durumuna geçiş */
+    g_print("Pipeline PLAYING durumuna getiriliyor...\n");
+    ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    if (ret == GST_STATE_CHANGE_FAILURE) {
+        g_printerr("Pipeline PLAYING durumuna getirilemedi.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* 5 saniye çalışmasını bekle */
+    g_print("5 saniye oynatılıyor...\n");
+    g_usleep(5 * 1000000);
+    
+    /* PAUSED durumuna geçiş (duraklat) */
+    g_print("Pipeline duraklatılıyor (PAUSED durumu)...\n");
+    ret = gst_element_set_state(pipeline, GST_STATE_PAUSED);
+    
+    /* 2 saniye bekle */
+    g_usleep(2 * 1000000);
+    
+    /* PLAYING durumuna geçiş (devam et) */
+    g_print("Pipeline devam ettiriliyor (PLAYING durumu)...\n");
+    ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    
+    /* 3 saniye daha çalışmasını bekle */
+    g_usleep(3 * 1000000);
+    
+    /* NULL durumuna geçiş (tamamen durdur ve kaynakları serbest bırak) */
+    g_print("Pipeline durduruluyor (NULL durumu)...\n");
+    ret = gst_element_set_state(pipeline, GST_STATE_NULL);
+    
+    /* Kaynakları temizle */
+    gst_object_unref(pipeline);
+    
+    return 0;
+}
+
+
+#### TODO: Devamı eklenecek en kısa zamanda !!!
