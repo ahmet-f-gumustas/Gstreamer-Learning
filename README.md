@@ -8,7 +8,15 @@ I am currently learning Gstreamer with Cpp &amp; Python
 
 # GStreamer C/C++ Öğreticisi - Türkçe
 
-<img src="./data/Gstreamer-logo.png" alt="GStreamer Logo" width="400"/>
+<div style="text-align: center;">
+  <div style="display: inline-block; margin-right: 20px;">
+    <img src="./data/Gstreamer-logo.png" alt="GStreamer Logo" width="400" height="100"/>
+  </div>
+  <div style="display: inline-block;">
+    <img src="./data/cpp-logo.png" alt="Cpp Logo" width="100" height="100"/>
+  </div>
+</div>
+
 
 ## İçindekiler
 
@@ -2025,8 +2033,18 @@ gcc -o video-player video-player.c $(pkg-config --cflags --libs gstreamer-1.0)
 
 
 
-#### Dosya altında örnekler bulunmaktadır.
+# Examples !
 
+01. Bu dosya altında C dilinde basit uygulamalar bulunmaktadır.
+02. Bu dosya altında Cpp dilinde bir media player geliştirilmiştir.
+03. TODO: Eklenecek
+04. TODO: Eklenecek
+05. TODO: Eklenecek
+06. TODO: Eklenecek
+07. TODO: Eklenecek
+08. TODO: Eklenecek
+09. TODO: Eklenecek
+10. TODO: Eklenecek
 
 
 ---
