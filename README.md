@@ -1319,9 +1319,713 @@ gcc -o audio-player audio-player.c $(pkg-config --cflags --libs gstreamer-1.0)
 ./audio-player muzik.ogg
 ```
 
+---
 
 
-#### TODO: Devamı eklenecek en kısa zamanda !!!
+## 8. Hata Yönetimi
+
+### 8.1. Dönüş Değerlerini Kontrol Etme
+
+GStreamer API fonksiyonlarının çoğu, başarı veya başarısızlık durumunu gösteren değerler döndürür. Bu değerleri kontrol etmek, hataları erken tespit etmenin en iyi yoludur:
+
+```c
+// Element oluşturma
+GstElement *element = gst_element_factory_make("elementadı", "özel-ad");
+if (!element) {
+    g_printerr("Element oluşturulamadı. Element eklentisi kurulu olabilir mi?\n");
+    // Hata işleme...
+    return -1;
+}
+
+// Element bağlama
+if (!gst_element_link(element1, element2)) {
+    g_printerr("Elementler bağlanamadı. Pad'ler uyumsuz olabilir mi?\n");
+    // Hata işleme...
+    return -1;
+}
+
+// Durum değiştirme
+GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+if (ret == GST_STATE_CHANGE_FAILURE) {
+    g_printerr("Pipeline durumu değiştirilemedi. Elementlerde sorun olabilir.\n");
+    // Hata işleme...
+    return -1;
+}
+```
+
+### 8.2. Bus Üzerinden Hata Mesajlarını Yakalama
+
+Pipeline çalışırken oluşan hataları yakalamak için bus mesajlarını dinlemek gerekir:
+
+```c
+// Bus üzerinden hata veya EOS mesajları için bekle
+GstBus *bus = gst_element_get_bus(pipeline);
+GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+    GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+
+// Mesajı işle
+if (msg != NULL) {
+    GError *err;
+    gchar *debug_info;
+    
+    if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR) {
+        gst_message_parse_error(msg, &err, &debug_info);
+        g_printerr("Pipeline hatası: %s\n", err->message);
+        g_printerr("Hata ayıklama bilgisi: %s\n", debug_info ? debug_info : "Yok");
+        g_free(debug_info);
+        g_error_free(err);
+    }
+    
+    gst_message_unref(msg);
+}
+```
+
+### 8.3. Örnek: Sağlam Hata Kontrolü
+
+Aşağıdaki örnek, kapsamlı hata kontrolü yapan bir uygulamayı göstermektedir:
+
+```c
+#include <gst/gst.h>
+
+int main(int argc, char *argv[]) {
+    GstElement *pipeline = NULL;
+    GstElement *source = NULL, *converter = NULL, *sink = NULL;
+    GstBus *bus = NULL;
+    GstMessage *msg = NULL;
+    GstStateChangeReturn state_ret;
+    gboolean terminate = FALSE;
+    
+    /* GStreamer'ı başlat */
+    gst_init(&argc, &argv);
+    
+    /* Hata işleme için temizleme noktaları belirt */
+    do {
+        /* Pipeline elementlerini oluştur */
+        pipeline = gst_pipeline_new("error-handling-example");
+        if (!pipeline) {
+            g_printerr("Pipeline oluşturulamadı\n");
+            break;
+        }
+        
+        source = gst_element_factory_make("videotestsrc", "source");
+        if (!source) {
+            g_printerr("Videotestsrc oluşturulamadı. GStreamer eklentileri doğru kurulu mu?\n");
+            break;
+        }
+        
+        converter = gst_element_factory_make("videoconvert", "converter");
+        if (!converter) {
+            g_printerr("Videoconvert oluşturulamadı\n");
+            break;
+        }
+        
+        sink = gst_element_factory_make("autovideosink", "sink");
+        if (!sink) {
+            g_printerr("Autovideosink oluşturulamadı\n");
+            break;
+        }
+        
+        /* Pipeline'a elementleri ekle */
+        gst_bin_add_many(GST_BIN(pipeline), source, converter, sink, NULL);
+        
+        /* Elementleri bağla */
+        if (!gst_element_link_many(source, converter, sink, NULL)) {
+            g_printerr("Elementler bağlanamadı\n");
+            break;
+        }
+        
+        /* Pipeline durumunu PLAYING olarak ayarla */
+        g_print("Pipeline başlatılıyor...\n");
+        state_ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+        if (state_ret == GST_STATE_CHANGE_FAILURE) {
+            g_printerr("Pipeline PLAYING durumuna getirilemedi\n");
+            break;
+        }
+        
+        /* Bus'ı al ve mesajları dinle */
+        bus = gst_element_get_bus(pipeline);
+        
+        /* Asenkron durum değişikliğinin tamamlanmasını bekle */
+        if (state_ret == GST_STATE_CHANGE_ASYNC) {
+            g_print("Asenkron durum değişikliği için bekleniyor...\n");
+            state_ret = gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
+            if (state_ret == GST_STATE_CHANGE_FAILURE) {
+                g_printerr("Durum değişikliği başarısız oldu\n");
+                break;
+            }
+        }
+        
+        g_print("Pipeline başlatıldı, 5 saniye çalıştırılacak...\n");
+        
+        /* Mesaj döngüsü */
+        terminate = FALSE;
+        do {
+            msg = gst_bus_timed_pop_filtered(bus, 5 * GST_SECOND,
+                GST_MESSAGE_ERROR | GST_MESSAGE_EOS | GST_MESSAGE_STATE_CHANGED);
+            
+            /* Zaman aşımı (NULL mesaj) - normal çıkış */
+            if (!msg) {
+                g_print("5 saniyelik zaman aşımına ulaşıldı, çıkılıyor...\n");
+                terminate = TRUE;
+                break;
+            }
+            
+            /* Mesajı işle */
+            switch (GST_MESSAGE_TYPE(msg)) {
+                case GST_MESSAGE_ERROR: {
+                    GError *err;
+                    gchar *debug;
+                    
+                    gst_message_parse_error(msg, &err, &debug);
+                    g_printerr("Hata: %s\n", err->message);
+                    if (debug) {
+                        g_printerr("Hata Ayıklama Detayları: %s\n", debug);
+                    }
+                    g_error_free(err);
+                    g_free(debug);
+                    
+                    terminate = TRUE;
+                    break;
+                }
+                case GST_MESSAGE_EOS:
+                    g_print("End of Stream alındı\n");
+                    terminate = TRUE;
+                    break;
+                case GST_MESSAGE_STATE_CHANGED:
+                    /* Sadece pipeline'ın durum değişikliklerini izle */
+                    if (GST_MESSAGE_SRC(msg) == GST_OBJECT(pipeline)) {
+                        GstState old_state, new_state, pending_state;
+                        gst_message_parse_state_changed(msg, &old_state, &new_state, &pending_state);
+                        g_print("Pipeline durum değişikliği: %s -> %s\n",
+                                gst_element_state_get_name(old_state),
+                                gst_element_state_get_name(new_state));
+                    }
+                    break;
+                default:
+                    g_printerr("Beklenmeyen mesaj alındı\n");
+                    break;
+            }
+            
+            gst_message_unref(msg);
+            
+        } while (!terminate);
+        
+    } while (FALSE); /* Bu do-while bloğu sadece bir kez çalışır, erken çıkış için kullanılır */
+    
+    /* Temizlik */
+    g_print("Kaynakları temizleniyor...\n");
+    
+    if (pipeline) {
+        gst_element_set_state(pipeline, GST_STATE_NULL);
+        gst_object_unref(pipeline);
+    }
+    
+    if (bus) {
+        gst_object_unref(bus);
+    }
+    
+    return 0;
+}
+```
+
+Derleme:
+
+```bash
+gcc -o error-handling error-handling.c $(pkg-config --cflags --libs gstreamer-1.0)
+```
+
+## 9. Etkinlikler (Events) ve Sorgular (Queries)
+
+### 9.1. Etkinliklerin Rolü
+
+**Etkinlikler (Events)**, pipeline içinde element durumlarını veya akış davranışını değiştirmek için kullanılır. Etkinlikler genellikle akışın tersine ilerler (upstream veya downstream).
+
+Yaygın etkinlik türleri:
+- **Seek Events**: Medya konumunu değiştirmek için
+- **Flush Events**: Tamponları boşaltmak için
+- **EOS Events**: End-of-Stream (akış sonu) sinyali göndermek için
+- **QOS Events**: Quality of Service (hizmet kalitesi) bilgisi göndermek için
+
+```c
+// Bir seek etkinliği gönderme örneği (medyada belirli bir konuma atlama)
+gboolean seek_res;
+seek_res = gst_element_seek_simple(
+    pipeline,                  // İşlemi yapacak element
+    GST_FORMAT_TIME,           // Konum formatı (zaman)
+    GST_SEEK_FLAG_FLUSH |      // Tamponları temizle
+    GST_SEEK_FLAG_KEY_UNIT,    // En yakın anahtar karede dur
+    30 * GST_SECOND            // 30. saniyeye atla
+);
+
+if (!seek_res) {
+    g_printerr("Seek işlemi başarısız oldu\n");
+}
+```
+
+### 9.2. Sorguların Rolü
+
+**Sorgular (Queries)**, elementlerden bilgi almak için kullanılır. Pipeline içindeki elementlere çeşitli bilgi soruları gönderebilirsiniz.
+
+Yaygın sorgu türleri:
+- **Position Query**: Mevcut konum bilgisi
+- **Duration Query**: Medya süresi
+- **Seeking Query**: Atlama (seeking) desteği ve aralığı
+- **Formats Query**: Desteklenen format türleri
+
+```c
+// Medya süresini sorgulama örneği
+gint64 duration;
+gboolean res;
+
+res = gst_element_query_duration(pipeline, GST_FORMAT_TIME, &duration);
+if (res) {
+    g_print("Medya süresi: %" GST_TIME_FORMAT "\n", GST_TIME_ARGS(duration));
+} else {
+    g_printerr("Süre sorgulanamadı\n");
+}
+
+// Mevcut konumu sorgulama örneği
+gint64 position;
+res = gst_element_query_position(pipeline, GST_FORMAT_TIME, &position);
+if (res) {
+    g_print("Mevcut konum: %" GST_TIME_FORMAT "\n", GST_TIME_ARGS(position));
+} else {
+    g_printerr("Konum sorgulanamadı\n");
+}
+```
+
+### 9.3. Örnek: Basit Bir Seek Uygulaması
+
+Aşağıdaki örnek, bir medya dosyasını oynatan ve kullanıcının medyada ileri/geri atlamasına izin veren basit bir uygulamadır:
+
+```c
+#include <gst/gst.h>
+#include <stdio.h>
+
+static gboolean handle_keyboard(GIOChannel *source, GIOCondition cond, gpointer data);
+static gboolean seek_element(GstElement *pipeline, gdouble rate, gint64 position);
+
+int main(int argc, char *argv[]) {
+    GstElement *pipeline;
+    GIOChannel *io_stdin;
+    guint io_watch_id;
+    
+    /* GStreamer'ı başlat */
+    gst_init(&argc, &argv);
+    
+    /* Kullanım bilgisi */
+    if (argc != 2) {
+        g_printerr("Kullanım: %s <medya dosyası>\n", argv[0]);
+        return -1;
+    }
+    
+    /* playbin elementi oluştur (otomatik pipeline kurar) */
+    pipeline = gst_element_factory_make("playbin", "player");
+    if (!pipeline) {
+        g_printerr("Playbin elementi oluşturulamadı\n");
+        return -1;
+    }
+    
+    /* Oynatılacak dosyayı ayarla */
+    g_object_set(G_OBJECT(pipeline), "uri", gst_filename_to_uri(argv[1], NULL), NULL);
+    
+    /* Klavye giriş kanalını ayarla */
+    io_stdin = g_io_channel_unix_new(fileno(stdin));
+    g_io_channel_set_flags(io_stdin, G_IO_FLAG_NONBLOCK, NULL);
+    
+    /* Kullanım bilgilerini göster */
+    g_print(
+        "\n"
+        "*************************************************\n"
+        "* 'q': Çıkış                                    *\n"
+        "* 'p': Oynat/Duraklat                           *\n"
+        "* '+': 10 saniye ileri                          *\n"
+        "* '-': 10 saniye geri                           *\n"
+        "* 'r': Normal hıza dön (1.0x)                   *\n"
+        "* '1': 0.5x hız (yavaş)                         *\n"
+        "* '2': 2.0x hız (hızlı)                         *\n"
+        "*************************************************\n\n"
+    );
+    
+    /* Klavye izleyicisi ekle */
+    io_watch_id = g_io_add_watch(io_stdin, G_IO_IN, (GIOFunc)handle_keyboard, pipeline);
+    
+    /* Pipeline'ı oynat */
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    
+    /* Main loop başlat */
+    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+    g_main_loop_run(loop);
+    
+    /* Temizlik */
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+    g_source_remove(io_watch_id);
+    g_io_channel_unref(io_stdin);
+    g_main_loop_unref(loop);
+    
+    return 0;
+}
+
+/* Klavye tuşlarını işle */
+static gboolean handle_keyboard(GIOChannel *source, GIOCondition cond, gpointer data) {
+    GstElement *pipeline = (GstElement *)data;
+    GstState state, pending;
+    gchar *str = NULL;
+    
+    if (g_io_channel_read_line(source, &str, NULL, NULL, NULL) != G_IO_STATUS_NORMAL) {
+        return TRUE;
+    }
+    
+    switch (str[0]) {
+        case 'q':
+        case 'Q':
+            g_main_loop_quit((GMainLoop *)g_main_loop_new(NULL, FALSE));
+            break;
+        case 'p':
+        case 'P':
+            gst_element_get_state(pipeline, &state, &pending, 0);
+            if (state == GST_STATE_PLAYING)
+                gst_element_set_state(pipeline, GST_STATE_PAUSED);
+            else
+                gst_element_set_state(pipeline, GST_STATE_PLAYING);
+            break;
+        case '+':
+            {
+                gint64 position;
+                if (gst_element_query_position(pipeline, GST_FORMAT_TIME, &position)) {
+                    seek_element(pipeline, 1.0, position + 10 * GST_SECOND);
+                }
+            }
+            break;
+        case '-':
+            {
+                gint64 position;
+                if (gst_element_query_position(pipeline, GST_FORMAT_TIME, &position)) {
+                    seek_element(pipeline, 1.0, position - 10 * GST_SECOND);
+                }
+            }
+            break;
+        case 'r':
+        case 'R':
+            seek_element(pipeline, 1.0, -1);
+            break;
+        case '1':
+            seek_element(pipeline, 0.5, -1);
+            break;
+        case '2':
+            seek_element(pipeline, 2.0, -1);
+            break;
+        default:
+            break;
+    }
+    
+    g_free(str);
+    return TRUE;
+}
+
+/* Seek işlemini gerçekleştir */
+static gboolean seek_element(GstElement *pipeline, gdouble rate, gint64 position) {
+    GstEvent *seek_event;
+    
+    /* Mevcut konumu koru (-1 ise) */
+    if (position < 0) {
+        if (!gst_element_query_position(pipeline, GST_FORMAT_TIME, &position)) {
+            g_printerr("Mevcut konum alınamadı\n");
+            return FALSE;
+        }
+    }
+    
+    /* Yeni bir seek event oluştur */
+    if (rate > 0) {
+        seek_event = gst_event_new_seek(rate, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE,
+                                       GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_END, 0);
+    } else {
+        seek_event = gst_event_new_seek(rate, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE,
+                                       GST_SEEK_TYPE_SET, 0, GST_SEEK_TYPE_SET, position);
+    }
+    
+    /* Seek event'i gönder */
+    if (!gst_element_send_event(pipeline, seek_event)) {
+        g_printerr("Seek işlemi başarısız oldu\n");
+        return FALSE;
+    }
+    
+    g_print("Pozisyon: %" GST_TIME_FORMAT ", Hız: %.2f\n", GST_TIME_ARGS(position), rate);
+    return TRUE;
+}
+```
+
+Derleme:
+
+```bash
+gcc -o seek-player seek-player.c $(pkg-config --cflags --libs gstreamer-1.0)
+```
+
+Çalıştırma:
+
+```bash
+./seek-player video.mp4
+```
+
+## 10. Pratik Örnekler ve İpuçları
+
+### 10.1. Command-line Araçları ile Pipeline Test Etme
+
+GStreamer, pipeline'ları komut satırından test etmek için `gst-launch-1.0` adlı güçlü bir araç sunar. Bu araç, kod yazmadan hızlıca pipeline'lar oluşturmanızı ve test etmenizi sağlar.
+
+Temel kullanım:
+
+```bash
+gst-launch-1.0 [seçenekler] ELEMENT [özellikleri] ! ELEMENT [özellikleri] ! ...
+```
+
+Örnekler:
+
+1. **Basit video oynatma**:
+   ```bash
+   gst-launch-1.0 playbin uri=file:///path/to/video.mp4
+   ```
+
+2. **Test video gösterimi**:
+   ```bash
+   gst-launch-1.0 videotestsrc ! videoconvert ! autovideosink
+   ```
+
+3. **Ses çalma**:
+   ```bash
+   gst-launch-1.0 audiotestsrc ! audioconvert ! autoaudiosink
+   ```
+
+4. **Dosyadan video oynatma (elementler ile)**:
+   ```bash
+   gst-launch-1.0 filesrc location=/path/to/video.mp4 ! qtdemux ! h264parse ! avdec_h264 ! videoconvert ! autovideosink
+   ```
+
+5. **Webcam'den görüntü alma**:
+   ```bash
+   gst-launch-1.0 v4l2src ! videoconvert ! autovideosink
+   ```
+
+6. **Video dosyasını farklı formata dönüştürme**:
+   ```bash
+   gst-launch-1.0 filesrc location=input.mp4 ! qtdemux ! h264parse ! avdec_h264 ! x264enc ! mp4mux ! filesink location=output.mp4
+   ```
+
+7. **Ekran kaydı**:
+   ```bash
+   gst-launch-1.0 ximagesrc ! videoconvert ! x264enc ! mp4mux ! filesink location=screen-recording.mp4
+   ```
+
+Bu komutlar, GStreamer uygulamanızı geliştirmeden önce pipeline tasarımınızı test etmenize yardımcı olur.
+
+### 10.2. Kullanışlı Elementler
+
+1. **queue**: Elementler arasında kuyruk (buffer) oluşturur ve farklı thread'lerde çalışmalarını sağlar
+   ```c
+   GstElement *queue = gst_element_factory_make("queue", "buffer");
+   g_object_set(G_OBJECT(queue), "max-size-buffers", 100, NULL);
+   ```
+
+2. **tee**: Bir kaynaktan gelen veriyi birden fazla çıkışa dağıtmak için kullanılır
+   ```c
+   GstElement *tee = gst_element_factory_make("tee", "stream-divider");
+   GstPad *tee_audio_pad = gst_element_get_request_pad(tee, "src_%u");
+   GstPad *tee_video_pad = gst_element_get_request_pad(tee, "src_%u");
+   ```
+
+3. **fakesink**: Veri akışını test etmek için gerçek bir çıkış olmadan veriyi tüketen element
+   ```c
+   GstElement *fakesink = gst_element_factory_make("fakesink", "test-sink");
+   g_object_set(G_OBJECT(fakesink), "sync", TRUE, NULL);
+   ```
+
+4. **identity**: Veri akışını değiştirmeden geçiren, isteğe bağlı olarak veri hakkında bilgi veren element
+   ```c
+   GstElement *identity = gst_element_factory_make("identity", "monitor");
+   g_object_set(G_OBJECT(identity), "dump", TRUE, "silent", FALSE, NULL);
+   ```
+
+5. **valve**: Bir akışı açıp kapatmak için kullanılan kontrol element
+   ```c
+   GstElement *valve = gst_element_factory_make("valve", "control");
+   g_object_set(G_OBJECT(valve), "drop", FALSE, NULL);  // TRUE = veriyi engelle, FALSE = veriyi geçir
+   ```
+
+### 10.3. Multithreading ve GStreamer
+
+GStreamer, içsel olarak multithreaded bir mimariye sahiptir. Bununla birlikte, uygulamanızda GStreamer pipeline'ı ile UI thread'i arasındaki etkileşimi yönetmek için bazı desenler kullanabilirsiniz:
+
+1. **GMainLoop ile Bus İzleme**:
+   ```c
+   /* Bus izleyici oluşturma */
+   GstBus *bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+   guint bus_watch_id = gst_bus_add_watch(bus, bus_callback, user_data);
+   gst_object_unref(bus);### 7.6. Örnek: Video Dosyası Oynatma
+
+Aşağıdaki örnek, bir video dosyasını oynatmak için daha karmaşık bir pipeline oluşturur:
+
+```c
+#include <gst/gst.h>
+
+/* Sinyal işleyicisi fonksiyon prototipi */
+static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
+
+int main(int argc, char *argv[]) {
+    GstElement *pipeline, *source, *demuxer, *video_decoder, *video_convert, *video_sink;
+    GstBus *bus;
+    GstMessage *msg;
+    GstStateChangeReturn ret;
+    
+    /* GStreamer'ı başlat */
+    gst_init(&argc, &argv);
+    
+    /* Bir medya dosyası belirtildiğinden emin ol */
+    if (argc != 2) {
+        g_printerr("Bir video dosyası belirtin: %s <dosya>\n", argv[0]);
+        return -1;
+    }
+    
+    /* Elementleri oluştur */
+    pipeline = gst_pipeline_new("video-player");
+    source = gst_element_factory_make("filesrc", "file-source");
+    demuxer = gst_element_factory_make("qtdemux", "demuxer");      // MP4/MOV demuxer
+    video_decoder = gst_element_factory_make("avdec_h264", "video-decoder");  // H.264 decoder
+    video_convert = gst_element_factory_make("videoconvert", "converter");
+    video_sink = gst_element_factory_make("autovideosink", "video-sink");
+    
+    /* Tüm elementlerin oluşturulduğundan emin ol */
+    if (!pipeline || !source || !demuxer || !video_decoder || !video_convert || !video_sink) {
+        g_printerr("Elementlerden biri oluşturulamadı.\n");
+        return -1;
+    }
+    
+    /* Dosya konumunu ayarla */
+    g_object_set(G_OBJECT(source), "location", argv[1], NULL);
+    
+    /* Pipeline'a elementleri ekle */
+    gst_bin_add_many(GST_BIN(pipeline), source, demuxer, video_decoder, video_convert, video_sink, NULL);
+    
+    /* Elementleri bağlamaya başla */
+    /* source -> demuxer */
+    if (!gst_element_link(source, demuxer)) {
+        g_printerr("Elementler bağlanamadı: source -> demuxer\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* demuxer'ın h264 video akışı için sinyal izleyicisi ekle */
+    g_signal_connect(demuxer, "pad-added", G_CALLBACK(on_pad_added), video_decoder);
+    
+    /* video akışını sonraki elementlere bağla */
+    if (!gst_element_link_many(video_decoder, video_convert, video_sink, NULL)) {
+        g_printerr("Elementler bağlanamadı: decoder -> converter -> sink\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* Pipeline durumunu PLAYING olarak ayarla */
+    g_print("Pipeline başlatılıyor...\n");
+    ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    if (ret == GST_STATE_CHANGE_FAILURE) {
+        g_printerr("Pipeline PLAYING durumuna getirilemedi.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* Bus üzerinden mesajları bekle */
+    bus = gst_element_get_bus(pipeline);
+    msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+        GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+    
+    /* Mesaj işleme */
+    if (msg != NULL) {
+        GError *err;
+        gchar *debug_info;
+        
+        switch (GST_MESSAGE_TYPE(msg)) {
+            case GST_MESSAGE_ERROR:
+                gst_message_parse_error(msg, &err, &debug_info);
+                g_printerr("Hata %s\n", err->message);
+                if (debug_info) {
+                    g_printerr("Hata ayıklama bilgisi: %s\n", debug_info);
+                }
+                g_free(debug_info);
+                g_error_free(err);
+                break;
+            case GST_MESSAGE_EOS:
+                g_print("End of stream\n");
+                break;
+            default:
+                g_printerr("Beklenmeyen mesaj alındı\n");
+                break;
+        }
+        gst_message_unref(msg);
+    }
+    
+    /* Pipeline'ı durdur */
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    
+    /* Kaynakları temizle */
+    gst_object_unref(bus);
+    gst_object_unref(pipeline);
+    
+    return 0;
+}
+
+/* Demuxer bir pad oluşturduğunda çağrılacak fonksiyon */
+static void on_pad_added(GstElement *element, GstPad *pad, gpointer data) {
+    GstElement *decoder = (GstElement *) data;
+    GstPad *sink_pad;
+    GstCaps *caps;
+    GstStructure *structure;
+    const gchar *name;
+    
+    /* Pad'in yeteneklerini al */
+    caps = gst_pad_get_current_caps(pad);
+    if (!caps) {
+        caps = gst_pad_query_caps(pad, NULL);
+    }
+    
+    structure = gst_caps_get_structure(caps, 0);
+    name = gst_structure_get_name(structure);
+    
+    /* Sadece video akışlarıyla ilgileniyoruz */
+    if (g_str_has_prefix(name, "video/x-h264")) {
+        /* Decoder'ın sink pad'ini al */
+        sink_pad = gst_element_get_static_pad(decoder, "sink");
+        
+        /* Pad'leri bağla */
+        if (GST_PAD_LINK_FAILED(gst_pad_link(pad, sink_pad))) {
+            g_printerr("Demuxer'dan video decoder'a pad bağlantısı başarısız oldu.\n");
+        } else {
+            g_print("Demuxer -> video decoder pad bağlantısı başarılı.\n");
+        }
+        
+        gst_object_unref(sink_pad);
+    }
+    
+    if (caps) {
+        gst_caps_unref(caps);
+    }
+}
+```
+
+Derleme:
+
+```bash
+gcc -o video-player video-player.c $(pkg-config --cflags --libs gstreamer-1.0)
+```
+
+Çalıştırma:
+
+```bash
+./video-player video.mp4
+```
+
+
+
+#### Dosya altında örnekler bulunmaktadır.
 
 
 
