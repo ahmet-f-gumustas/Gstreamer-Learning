@@ -602,6 +602,249 @@ int main(int argc, char *argv[]) {
 }
 
 
+
+Tabii, kusura bakmayın. 6. maddeyi (Bus ve Mesajlar) aşağıda bulabilirsiniz:
+
+## 6. Bus ve Mesajlar
+
+### 6.1. Bus'a Erişim
+
+GStreamer bus, elementlerden uygulama ana döngüsüne mesaj taşıyan bir mekanizmadır. Bus'a erişmek için:
+
+```c
+// Pipeline'ın bus'ını alma
+GstBus *bus = gst_element_get_bus(pipeline);
+```
+
+### 6.2. Mesajları Çekme
+
+Bus'tan mesaj almak için birkaç yöntem vardır:
+
+1. **Engelleyici (Blocking) Mesaj Alma**:
+   ```c
+   // Sonsuza kadar bekle ve belirli türdeki mesajları al
+   GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+       GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+   ```
+
+2. **Engelleyici Olmayan (Non-blocking) Mesaj Kontrol**:
+   ```c
+   // Mesaj varsa hemen al, yoksa NULL dön
+   GstMessage *msg = gst_bus_pop_filtered(bus,
+       GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+   ```
+
+3. **Zaman Aşımlı Bekleme**:
+   ```c
+   // En fazla 100ms bekle
+   GstMessage *msg = gst_bus_timed_pop_filtered(bus, 100 * GST_MSECOND,
+       GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+   ```
+
+### 6.3. Mesaj Türleri
+
+En yaygın mesaj türleri:
+
+1. **GST_MESSAGE_ERROR**: Bir hata oluştuğunda gönderilir
+2. **GST_MESSAGE_EOS**: End-of-Stream, akışın sonuna ulaşıldığında gönderilir
+3. **GST_MESSAGE_STATE_CHANGED**: Bir elementin durumu değiştiğinde gönderilir
+4. **GST_MESSAGE_TAG**: Medya metadata'sı (etiketler) bulunduğunda gönderilir
+5. **GST_MESSAGE_BUFFERING**: Arabellekleme durumu değiştiğinde gönderilir
+6. **GST_MESSAGE_CLOCK_LOST**: Pipeline saati kaybedildiğinde gönderilir
+7. **GST_MESSAGE_NEW_CLOCK**: Yeni bir saat seçildiğinde gönderilir
+8. **GST_MESSAGE_DURATION_CHANGED**: Medya süresi değiştiğinde gönderilir
+9. **GST_MESSAGE_ASYNC_DONE**: Asenkron durum değişikliği tamamlandığında gönderilir
+
+### 6.4. Örnek: Bus Mesajlarını Dinleme ve İşleme
+
+```c
+#include <gst/gst.h>
+
+static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data) {
+    GMainLoop *loop = (GMainLoop *) data;
+    
+    switch (GST_MESSAGE_TYPE(msg)) {
+        case GST_MESSAGE_EOS:
+            g_print("End of stream\n");
+            g_main_loop_quit(loop);
+            break;
+            
+        case GST_MESSAGE_ERROR: {
+            gchar  *debug;
+            GError *error;
+            
+            gst_message_parse_error(msg, &error, &debug);
+            g_free(debug);
+            
+            g_printerr("Hata: %s\n", error->message);
+            g_error_free(error);
+            
+            g_main_loop_quit(loop);
+            break;
+        }
+        
+        case GST_MESSAGE_STATE_CHANGED: {
+            GstState old_state, new_state, pending_state;
+            
+            // Sadece pipeline'ın durum değişikliklerini izle
+            if (GST_MESSAGE_SRC(msg) == GST_OBJECT(data)) {
+                gst_message_parse_state_changed(msg, &old_state, &new_state, &pending_state);
+                g_print("Pipeline durum değişikliği: %s -> %s\n",
+                        gst_element_state_get_name(old_state),
+                        gst_element_state_get_name(new_state));
+            }
+            break;
+        }
+        
+        case GST_MESSAGE_TAG: {
+            GstTagList *tags = NULL;
+            
+            gst_message_parse_tag(msg, &tags);
+            
+            g_print("Yeni etiketler alındı:\n");
+            gst_tag_list_foreach(tags, print_tag, NULL);
+            
+            gst_tag_list_unref(tags);
+            break;
+        }
+        
+        default:
+            break;
+    }
+    
+    // FALSE döndürerek sinyalin işlenmesine devam edilmesini sağlıyoruz
+    return TRUE;
+}
+
+static void print_tag(const GstTagList *tags, const gchar *tag, gpointer user_data) {
+    GValue val = { 0, };
+    gchar *str;
+    gint count;
+    
+    count = gst_tag_list_get_tag_size(tags, tag);
+    
+    for (gint i = 0; i < count; i++) {
+        gst_tag_list_index(tags, tag, i, &val);
+        
+        if (G_VALUE_HOLDS_STRING(&val))
+            str = g_value_dup_string(&val);
+        else
+            str = gst_value_serialize(&val);
+        
+        g_print("  %s: %s\n", tag, str);
+        g_free(str);
+        
+        g_value_unset(&val);
+    }
+}
+
+int main(int argc, char *argv[]) {
+    GMainLoop *loop;
+    GstElement *pipeline, *source, *decoder, *sink;
+    GstBus *bus;
+    guint bus_watch_id;
+    
+    /* GStreamer'ı başlat */
+    gst_init(&argc, &argv);
+    
+    /* Kontrol etmek için dosya adı gerekli */
+    if (argc != 2) {
+        g_printerr("Bir medya dosyası belirtin: %s dosya_adı\n", argv[0]);
+        return -1;
+    }
+    
+    /* Main loop oluştur */
+    loop = g_main_loop_new(NULL, FALSE);
+    
+    /* Pipeline elementlerini oluştur */
+    pipeline = gst_pipeline_new("audio-player");
+    source = gst_element_factory_make("filesrc", "file-source");
+    decoder = gst_element_factory_make("decodebin", "decoder");
+    sink = gst_element_factory_make("autoaudiosink", "audio-sink");
+    
+    if (!pipeline || !source || !decoder || !sink) {
+        g_printerr("Elementlerden biri oluşturulamadı.\n");
+        return -1;
+    }
+    
+    /* Dosya adını source'a ayarla */
+    g_object_set(G_OBJECT(source), "location", argv[1], NULL);
+    
+    /* Bus izleyici ekle */
+    bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+    bus_watch_id = gst_bus_add_watch(bus, bus_call, loop);
+    gst_object_unref(bus);
+    
+    /* Pipeline'ı kur */
+    gst_bin_add_many(GST_BIN(pipeline), source, decoder, sink, NULL);
+    
+    /* source ve decoder'ı bağla */
+    gst_element_link(source, decoder);
+    
+    /* decoder için pad-added sinyal işleyicisi ekle */
+    g_signal_connect(decoder, "pad-added", G_CALLBACK(on_pad_added), sink);
+    
+    /* Pipeline'ı PLAYING durumuna getir */
+    g_print("Pipeline başlatılıyor...\n");
+    gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    
+    /* Main loop'u çalıştır */
+    g_print("Main loop çalışıyor...\n");
+    g_main_loop_run(loop);
+    
+    /* Temizlik yap */
+    g_print("Main loop sonlandırıldı, kaynaklar temizleniyor...\n");
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(GST_OBJECT(pipeline));
+    g_source_remove(bus_watch_id);
+    g_main_loop_unref(loop);
+    
+    return 0;
+}
+
+/* decodebin bir pad oluşturduğunda çağrılacak işlev */
+static void on_pad_added(GstElement *element, GstPad *pad, gpointer data) {
+    GstElement *sink = (GstElement *) data;
+    GstPad *sinkpad;
+    
+    /* Sink'in sink pad'ini al */
+    sinkpad = gst_element_get_static_pad(sink, "sink");
+    
+    /* Eğer sink pad zaten bağlıysa işlem yapma */
+    if (gst_pad_is_linked(sinkpad)) {
+        gst_object_unref(sinkpad);
+        return;
+    }
+    
+    /* decoder'dan gelen pad'i sink pad'e bağla */
+    GstPadLinkReturn ret = gst_pad_link(pad, sinkpad);
+    
+    if (GST_PAD_LINK_FAILED(ret)) {
+        g_print("Pad bağlantısı başarısız oldu\n");
+    } else {
+        g_print("Pad bağlantısı başarılı\n");
+    }
+    
+    gst_object_unref(sinkpad);
+}
+```
+
+Derleme:
+
+```bash
+gcc -o bus-example bus-example.c $(pkg-config --cflags --libs gstreamer-1.0)
+```
+
+Çalıştırma:
+
+```bash
+./bus-example medya_dosyasi.mp3
+```
+
+
+
+
+
 #### TODO: Devamı eklenecek en kısa zamanda !!!
 
 
