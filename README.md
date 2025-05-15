@@ -603,3 +603,13 @@ int main(int argc, char *argv[]) {
 
 
 #### TODO: Devamı eklenecek en kısa zamanda !!!
+
+
+
+---
+
+Bu kapsamlı GStreamer öğreticisi, C ve C++ programcılarına GStreamer mimarisini ve kullanımını temel seviyeden orta seviyeye doğru adım adım anlatmayı amaçlamaktadır. Örnekler derlenebilir ve çalıştırılabilir olarak tasarlanmıştır. Daha ileri seviye konulara ilerlemek isteyen geliştiriciler için resmi GStreamer belgelerine ve örneklerine başvurulması önerilir.
+
+## Lisans
+
+Bu öğretici [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) lisansı altında sunulmaktadır. Kaynak belirtilerek paylaşılabilir, değiştirilebilir ve ticari olmayan amaçlarla kullanılabilir.
