@@ -8,7 +8,7 @@ I am currently learning Gstreamer with Cpp &amp; Python
 
 # GStreamer C/C++ Öğreticisi - Türkçe
 
-<img src="https://gstreamer.freedesktop.org/assets/header-logo-top.png" alt="GStreamer Logo" width="400"/>
+<img src="./data/Gstreamer-logo.png" alt="GStreamer Logo" width="400"/>
 
 ## İçindekiler
 
