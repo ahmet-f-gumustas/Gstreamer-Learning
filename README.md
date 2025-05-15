@@ -600,10 +600,10 @@ int main(int argc, char *argv[]) {
     
     return 0;
 }
+```
 
+---
 
-
-Tabii, kusura bakmayın. 6. maddeyi (Bus ve Mesajlar) aşağıda bulabilirsiniz:
 
 ## 6. Bus ve Mesajlar
 
@@ -842,6 +842,482 @@ gcc -o bus-example bus-example.c $(pkg-config --cflags --libs gstreamer-1.0)
 ```
 
 
+---
+
+
+## 7. Daha Karmaşık Pipeline'lar
+
+### 7.1. Farklı Kaynaklar
+
+GStreamer'da birçok kaynak element bulunur:
+
+1. **filesrc**: Dosyadan veri okuyan element
+   ```c
+   GstElement *source = gst_element_factory_make("filesrc", "file-source");
+   g_object_set(G_OBJECT(source), "location", "video.mp4", NULL);
+   ```
+
+2. **uridecodebin**: URI'den veri okuyan ve demux/decode yapan element
+   ```c
+   GstElement *source = gst_element_factory_make("uridecodebin", "uri-source");
+   g_object_set(G_OBJECT(source), "uri", "https://example.com/video.mp4", NULL);
+   ```
+
+3. **videotestsrc**: Test video desenleri üreten element
+   ```c
+   GstElement *source = gst_element_factory_make("videotestsrc", "test-source");
+   g_object_set(G_OBJECT(source), "pattern", 0, NULL); // SMPTE deseni
+   ```
+
+4. **audiotestsrc**: Test ses sinyalleri üreten element
+   ```c
+   GstElement *source = gst_element_factory_make("audiotestsrc", "test-source");
+   g_object_set(G_OBJECT(source), "freq", 440.0, NULL); // 440 Hz sinüs dalgası (A notası)
+   ```
+
+5. **v4l2src**: Video4Linux2 uyumlu kameralar için kaynak
+   ```c
+   GstElement *source = gst_element_factory_make("v4l2src", "camera-source");
+   g_object_set(G_OBJECT(source), "device", "/dev/video0", NULL);
+   ```
+
+### 7.2. Demuxer'lar
+
+Demuxer'lar, konteynır formatlarından (MP4, MKV, AVI vb.) ses ve video akışlarını ayıran elementlerdir.
+
+Popüler demuxer'lar:
+- **qtdemux**: MP4/MOV dosyaları için
+- **matroskademux**: MKV dosyaları için
+- **oggdemux**: OGG dosyaları için
+- **flvdemux**: FLV dosyaları için
+
+Demuxer'ların özelliği, dinamik pad'ler oluşturmasıdır. Her bir stream (akış) bulunduğunda yeni bir src pad oluşturulur. Bu nedenle, demuxer'ları diğer elementlere bağlamak için sinyal işleyicileri kullanmalıyız:
+
+```c
+// Demuxer oluşturma
+GstElement *demuxer = gst_element_factory_make("qtdemux", "demuxer");
+
+// Demuxer'a pad-added sinyal işleyicisi ekleme
+g_signal_connect(demuxer, "pad-added", G_CALLBACK(on_pad_added), NULL);
+
+// Sinyal işleyicisi
+static void on_pad_added(GstElement *element, GstPad *pad, gpointer data) {
+    // Pad'in yeteneklerini (capabilities) al
+    GstCaps *caps = gst_pad_get_current_caps(pad);
+    GstStructure *str = gst_caps_get_structure(caps, 0);
+    const gchar *name = gst_structure_get_name(str);
+    
+    // Video akışını işle
+    if (g_str_has_prefix(name, "video/")) {
+        // Video decoder'a bağla
+        // ...
+    }
+    // Ses akışını işle
+    else if (g_str_has_prefix(name, "audio/")) {
+        // Ses decoder'a bağla
+        // ...
+    }
+    
+    gst_caps_unref(caps);
+}
+```
+
+### 7.3. Dekoder'lar
+
+Dekoder'lar, sıkıştırılmış medya verisini (H.264, VP8, MP3, AAC vb.) işlenebilir raw formatlara dönüştüren elementlerdir.
+
+Popüler video dekoder'ları:
+- **avdec_h264**: H.264 video dekoderi
+- **avdec_mpeg2video**: MPEG-2 video dekoderi
+- **vp8dec**: VP8 video dekoderi
+- **vp9dec**: VP9 video dekoderi
+
+Popüler ses dekoder'ları:
+- **avdec_mp3**: MP3 ses dekoderi
+- **avdec_aac**: AAC ses dekoderi
+- **vorbisdec**: Vorbis ses dekoderi
+- **opusdec**: Opus ses dekoderi
+
+Genellikle, belirli bir codec'i doğrudan kullanmak yerine, otomatik codec seçimi yapabilen **decodebin** elementi kullanmak daha kolaydır:
+
+```c
+// Otomatik codec seçimli decoder
+GstElement *decoder = gst_element_factory_make("decodebin", "decoder");
+
+// Decoder'a sinyal işleyicisi ekleme
+g_signal_connect(decoder, "pad-added", G_CALLBACK(on_decoder_pad_added), NULL);
+```
+
+### 7.4. Çözücüler (Converter'lar)
+
+Converter'lar, bir medya formatını başka bir formata dönüştüren elementlerdir. Format dönüşümleri, farklı elementlerin uyumlu çalışmasını sağlar.
+
+Popüler converter'lar:
+- **videoconvert**: Video piksel formatı dönüştürücü
+- **audioconvert**: Ses formatı dönüştürücü
+- **audioresample**: Ses örnekleme hızı dönüştürücü
+- **videoscale**: Video boyutu değiştirici
+- **videorate**: Video kare hızı (framerate) dönüştürücü
+
+```c
+// Video dönüştürücü
+GstElement *converter = gst_element_factory_make("videoconvert", "converter");
+
+// Ses dönüştürücü ve örnekleme hızı değiştirici
+GstElement *audioconvert = gst_element_factory_make("audioconvert", "aconv");
+GstElement *audioresample = gst_element_factory_make("audioresample", "aresample");
+```
+
+### 7.5. Çıkışlar (Sink'ler)
+
+Sink'ler, pipeline'ın son elementleridir ve veriyi tüketen (görüntüleme, kaydetme, ağ üzerinden gönderme vb.) görevleri yerine getirirler.
+
+Popüler sink'ler:
+- **autovideosink**: Sistem için uygun video gösterici
+- **autoaudiosink**: Sistem için uygun ses çıkış birimi
+- **filesink**: Dosyaya veri kaydedici
+- **udpsink**: UDP üzerinden veri gönderici
+- **rtmpsink**: RTMP üzerinden yayın yapıcı
+
+```c
+// Video gösterici
+GstElement *videosink = gst_element_factory_make("autovideosink", "video-sink");
+
+// Ses çıkışı
+GstElement *audiosink = gst_element_factory_make("autoaudiosink", "audio-sink");
+
+// Dosyaya kayıt
+GstElement *filesink = gst_element_factory_make("filesink", "file-sink");
+g_object_set(G_OBJECT(filesink), "location", "output.mp4", NULL);
+```
+
+### 7.6. Örnek: Video Dosyası Oynatma
+
+Aşağıdaki örnek, bir video dosyasını oynatmak için daha karmaşık bir pipeline oluşturur:
+
+```c
+#include <gst/gst.h>
+
+/* Sinyal işleyicisi fonksiyon prototipi */
+static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
+
+int main(int argc, char *argv[]) {
+    GstElement *pipeline, *source, *demuxer, *video_decoder, *video_convert, *video_sink;
+    GstBus *bus;
+    GstMessage *msg;
+    GstStateChangeReturn ret;
+    
+    /* GStreamer'ı başlat */
+    gst_init(&argc, &argv);
+    
+    /* Bir medya dosyası belirtildiğinden emin ol */
+    if (argc != 2) {
+        g_printerr("Bir video dosyası belirtin: %s <dosya>\n", argv[0]);
+        return -1;
+    }
+    
+    /* Elementleri oluştur */
+    pipeline = gst_pipeline_new("video-player");
+    source = gst_element_factory_make("filesrc", "file-source");
+    demuxer = gst_element_factory_make("qtdemux", "demuxer");      // MP4/MOV demuxer
+    video_decoder = gst_element_factory_make("avdec_h264", "video-decoder");  // H.264 decoder
+    video_convert = gst_element_factory_make("videoconvert", "converter");
+    video_sink = gst_element_factory_make("autovideosink", "video-sink");
+    
+    /* Tüm elementlerin oluşturulduğundan emin ol */
+    if (!pipeline || !source || !demuxer || !video_decoder || !video_convert || !video_sink) {
+        g_printerr("Elementlerden biri oluşturulamadı.\n");
+        return -1;
+    }
+    
+    /* Dosya konumunu ayarla */
+    g_object_set(G_OBJECT(source), "location", argv[1], NULL);
+    
+    /* Pipeline'a elementleri ekle */
+    gst_bin_add_many(GST_BIN(pipeline), source, demuxer, video_decoder, video_convert, video_sink, NULL);
+    
+    /* Elementleri bağlamaya başla */
+    /* source -> demuxer */
+    if (!gst_element_link(source, demuxer)) {
+        g_printerr("Elementler bağlanamadı: source -> demuxer\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* demuxer'ın h264 video akışı için sinyal izleyicisi ekle */
+    g_signal_connect(demuxer, "pad-added", G_CALLBACK(on_pad_added), video_decoder);
+    
+    /* video akışını sonraki elementlere bağla */
+    if (!gst_element_link_many(video_decoder, video_convert, video_sink, NULL)) {
+        g_printerr("Elementler bağlanamadı: decoder -> converter -> sink\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* Pipeline durumunu PLAYING olarak ayarla */
+    g_print("Pipeline başlatılıyor...\n");
+    ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    if (ret == GST_STATE_CHANGE_FAILURE) {
+        g_printerr("Pipeline PLAYING durumuna getirilemedi.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* Bus üzerinden mesajları bekle */
+    bus = gst_element_get_bus(pipeline);
+    msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+        GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+    
+    /* Mesaj işleme */
+    if (msg != NULL) {
+        GError *err;
+        gchar *debug_info;
+        
+        switch (GST_MESSAGE_TYPE(msg)) {
+            case GST_MESSAGE_ERROR:
+                gst_message_parse_error(msg, &err, &debug_info);
+                g_printerr("Hata %s\n", err->message);
+                if (debug_info) {
+                    g_printerr("Hata ayıklama bilgisi: %s\n", debug_info);
+                }
+                g_free(debug_info);
+                g_error_free(err);
+                break;
+            case GST_MESSAGE_EOS:
+                g_print("End of stream\n");
+                break;
+            default:
+                g_printerr("Beklenmeyen mesaj alındı\n");
+                break;
+        }
+        gst_message_unref(msg);
+    }
+    
+    /* Pipeline'ı durdur */
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    
+    /* Kaynakları temizle */
+    gst_object_unref(bus);
+    gst_object_unref(pipeline);
+    
+    return 0;
+}
+
+/* Demuxer bir pad oluşturduğunda çağrılacak fonksiyon */
+static void on_pad_added(GstElement *element, GstPad *pad, gpointer data) {
+    GstElement *decoder = (GstElement *) data;
+    GstPad *sink_pad;
+    GstCaps *caps;
+    GstStructure *structure;
+    const gchar *name;
+    
+    /* Pad'in yeteneklerini al */
+    caps = gst_pad_get_current_caps(pad);
+    if (!caps) {
+        caps = gst_pad_query_caps(pad, NULL);
+    }
+    
+    structure = gst_caps_get_structure(caps, 0);
+    name = gst_structure_get_name(structure);
+    
+    /* Sadece video akışlarıyla ilgileniyoruz */
+    if (g_str_has_prefix(name, "video/x-h264")) {
+        /* Decoder'ın sink pad'ini al */
+        sink_pad = gst_element_get_static_pad(decoder, "sink");
+        
+        /* Pad'leri bağla */
+        if (GST_PAD_LINK_FAILED(gst_pad_link(pad, sink_pad))) {
+            g_printerr("Demuxer'dan video decoder'a pad bağlantısı başarısız oldu.\n");
+        } else {
+            g_print("Demuxer -> video decoder pad bağlantısı başarılı.\n");
+        }
+        
+        gst_object_unref(sink_pad);
+    }
+    
+    if (caps) {
+        gst_caps_unref(caps);
+    }
+}
+```
+
+Derleme:
+
+```bash
+gcc -o video-player video-player.c $(pkg-config --cflags --libs gstreamer-1.0)
+```
+
+Çalıştırma:
+
+```bash
+./video-player video.mp4
+```
+
+### 7.7. Örnek: Ses Dosyası Oynatma
+
+Aşağıdaki örnek, bir ses dosyasını oynatmak için bir pipeline oluşturur:
+
+```c
+#include <gst/gst.h>
+
+/* Sinyal işleyici fonksiyon prototipi */
+static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
+
+int main(int argc, char *argv[]) {
+    GstElement *pipeline, *source, *demuxer, *audio_decoder, *audio_convert, *audio_resample, *audio_sink;
+    GstBus *bus;
+    GstMessage *msg;
+    GstStateChangeReturn ret;
+    
+    /* GStreamer'ı başlat */
+    gst_init(&argc, &argv);
+    
+    /* Bir medya dosyası belirtildiğinden emin ol */
+    if (argc != 2) {
+        g_printerr("Bir ses dosyası belirtin: %s <dosya>\n", argv[0]);
+        return -1;
+    }
+    
+    /* Elementleri oluştur */
+    pipeline = gst_pipeline_new("audio-player");
+    source = gst_element_factory_make("filesrc", "file-source");
+    demuxer = gst_element_factory_make("oggdemux", "demuxer");       // OGG demuxer
+    audio_decoder = gst_element_factory_make("vorbisdec", "audio-decoder");  // Vorbis decoder
+    audio_convert = gst_element_factory_make("audioconvert", "converter");
+    audio_resample = gst_element_factory_make("audioresample", "resampler");
+    audio_sink = gst_element_factory_make("autoaudiosink", "audio-sink");
+    
+    /* Tüm elementlerin oluşturulduğundan emin ol */
+    if (!pipeline || !source || !demuxer || !audio_decoder || 
+        !audio_convert || !audio_resample || !audio_sink) {
+        g_printerr("Elementlerden biri oluşturulamadı.\n");
+        return -1;
+    }
+    
+    /* Dosya konumunu ayarla */
+    g_object_set(G_OBJECT(source), "location", argv[1], NULL);
+    
+    /* Pipeline'a elementleri ekle */
+    gst_bin_add_many(GST_BIN(pipeline), 
+                    source, demuxer, audio_decoder, 
+                    audio_convert, audio_resample, audio_sink, NULL);
+    
+    /* Elementleri bağlamaya başla */
+    /* source -> demuxer */
+    if (!gst_element_link(source, demuxer)) {
+        g_printerr("Elementler bağlanamadı: source -> demuxer\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* demuxer'ın vorbis ses akışı için sinyal izleyicisi ekle */
+    g_signal_connect(demuxer, "pad-added", G_CALLBACK(on_pad_added), audio_decoder);
+    
+    /* ses akışını sonraki elementlere bağla */
+    if (!gst_element_link_many(audio_decoder, audio_convert, audio_resample, audio_sink, NULL)) {
+        g_printerr("Elementler bağlanamadı: decoder -> converter -> resampler -> sink\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* Pipeline durumunu PLAYING olarak ayarla */
+    g_print("Pipeline başlatılıyor...\n");
+    ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    if (ret == GST_STATE_CHANGE_FAILURE) {
+        g_printerr("Pipeline PLAYING durumuna getirilemedi.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    
+    /* Bus üzerinden mesajları bekle */
+    bus = gst_element_get_bus(pipeline);
+    msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
+        GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+    
+    /* Mesaj işleme */
+    if (msg != NULL) {
+        GError *err;
+        gchar *debug_info;
+        
+        switch (GST_MESSAGE_TYPE(msg)) {
+            case GST_MESSAGE_ERROR:
+                gst_message_parse_error(msg, &err, &debug_info);
+                g_printerr("Hata %s\n", err->message);
+                if (debug_info) {
+                    g_printerr("Hata ayıklama bilgisi: %s\n", debug_info);
+                }
+                g_free(debug_info);
+                g_error_free(err);
+                break;
+            case GST_MESSAGE_EOS:
+                g_print("End of stream\n");
+                break;
+            default:
+                g_printerr("Beklenmeyen mesaj alındı\n");
+                break;
+        }
+        gst_message_unref(msg);
+    }
+    
+    /* Pipeline'ı durdur */
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    
+    /* Kaynakları temizle */
+    gst_object_unref(bus);
+    gst_object_unref(pipeline);
+    
+    return 0;
+}
+
+/* Demuxer bir pad oluşturduğunda çağrılacak fonksiyon */
+static void on_pad_added(GstElement *element, GstPad *pad, gpointer data) {
+    GstElement *decoder = (GstElement *) data;
+    GstPad *sink_pad;
+    GstCaps *caps;
+    GstStructure *structure;
+    const gchar *name;
+    
+    /* Pad'in yeteneklerini al */
+    caps = gst_pad_get_current_caps(pad);
+    if (!caps) {
+        caps = gst_pad_query_caps(pad, NULL);
+    }
+    
+    structure = gst_caps_get_structure(caps, 0);
+    name = gst_structure_get_name(structure);
+    
+    /* Sadece ses akışlarıyla ilgileniyoruz */
+    if (g_str_has_prefix(name, "audio/x-vorbis")) {
+        /* Decoder'ın sink pad'ini al */
+        sink_pad = gst_element_get_static_pad(decoder, "sink");
+        
+        /* Pad'leri bağla */
+        if (GST_PAD_LINK_FAILED(gst_pad_link(pad, sink_pad))) {
+            g_printerr("Demuxer'dan ses decoder'a pad bağlantısı başarısız oldu.\n");
+        } else {
+            g_print("Demuxer -> ses decoder pad bağlantısı başarılı.\n");
+        }
+        
+        gst_object_unref(sink_pad);
+    }
+    
+    if (caps) {
+        gst_caps_unref(caps);
+    }
+}
+```
+
+Derleme:
+
+```bash
+gcc -o audio-player audio-player.c $(pkg-config --cflags --libs gstreamer-1.0)
+```
+
+Çalıştırma:
+
+```bash
+./audio-player muzik.ogg
+```
 
 
 
