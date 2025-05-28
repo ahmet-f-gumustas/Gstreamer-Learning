@@ -20,6 +20,8 @@ I am currently learning Gstreamer with Cpp &amp; Python
 
 ## İçindekiler
 
+Note : Bu readme aslında bir not olarak kullanılmıştır proje dosyaları ayrı bir şekilde değerlendirilmelidir !
+
 - [1. Giriş](#1-giriş)
   - [1.1. GStreamer Nedir? Neden Kullanılır?](#11-gstreamer-nedir-neden-kullanılır)
   - [1.2. Medya Frameworklerine Genel Bakış](#12-medya-frameworklerine-genel-bakış)
