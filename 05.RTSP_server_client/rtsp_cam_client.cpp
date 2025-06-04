@@ -1,9 +1,11 @@
 #include <gst/gst.h>
+#include <gst/rtsp/gstrtsptransport.h>
 #include <iostream>
 #include <chrono>
 #include <fstream>
 #include <vector>
 #include <iomanip>
+#include <thread>
 
 class RTSPCameraClient {
 private:
@@ -77,7 +79,7 @@ public:
             "buffer-mode", 0,  // No buffering
             "udp-buffer-size", 524288,  // 512KB UDP buffer
             "do-rtcp", TRUE,
-            "protocols", GST_RTSP_LOWER_TRANS_UDP,  // Use UDP for lower latency
+            "protocols", 0x00000004,  // Use UDP for lower latency (GST_RTSP_LOWER_TRANS_UDP = 4)
             nullptr);
         
         // Configure queue for minimal buffering
