@@ -1,0 +1,23 @@
+GStreamerVideoAnalytics/
+├── CMakeLists.txt
+├── README.md
+├── config/
+│   └── pipeline_config.yaml
+├── include/
+│   ├── video_processor.h
+│   ├── rtsp_streamer.h
+│   ├── motion_detector.h
+│   └── pipeline_manager.h
+├── src/
+│   ├── main.cpp
+│   ├── video_processor.cpp
+│   ├── rtsp_streamer.cpp
+│   ├── motion_detector.cpp
+│   └── pipeline_manager.cpp
+├── scripts/
+│   ├── build.sh
+│   └── run_tests.sh
+├── assets/
+│   └── test_video.mp4
+└── build/
+    └── (derlenmiş dosyalar)
