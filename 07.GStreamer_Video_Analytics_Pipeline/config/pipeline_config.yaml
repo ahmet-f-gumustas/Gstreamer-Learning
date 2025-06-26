@@ -1,0 +1,72 @@
+# GStreamer Video Analytics Pipeline Yapılandırma Dosyası
+
+pipeline:
+  # Video giriş ayarları
+  input:
+    type: "file"              # file, webcam, rtsp, http
+    location: "assets/test_video.mp4"
+    
+  # Video format ayarları
+  video:
+    width: 1920
+    height: 1080
+    framerate: 30
+    format: "I420"            # Video pixel formatı
+    
+  # İşleme ayarları
+  processing:
+    motion_detection: true    # Hareket algılama
+    gpu_acceleration: false   # GPU hızlandırma
+    
+    # Video filtreleri
+    filters:
+      brightness: 0.0         # -100 ile 100 arası
+      contrast: 1.0           # 0.5 ile 3.0 arası
+      saturation: 1.0         # 0.0 ile 2.0 arası
+      
+    # Hareket algılama parametreleri
+    motion:
+      algorithm: "MOG2"       # FRAME_DIFF, BACKGROUND_SUB, MOG2, KNN
+      sensitivity: 0.5        # 0.0 (düşük) - 1.0 (yüksek)
+      min_area: 500          # Minimum hareket alanı (piksel²)
+      enable_alerts: true     # Hareket alarmları
+      
+  # Çıkış ayarları
+  output:
+    type: "display"           # display, file, rtsp
+    location: ""              # Çıkış konumu (file veya rtsp için)
+    
+    # Kodlama ayarları
+    encoding:
+      codec: "h264"           # h264, h265, vp8, vp9
+      bitrate: 4000000        # Bit hızı (bps)
+      preset: "medium"        # ultrafast, fast, medium, slow
+      
+    # RTSP server ayarları
+    rtsp:
+      port: 8554
+      mount_point: "/live"
+      max_clients: 10
+      enable_auth: false
+      username: "admin"
+      password: "admin"
+      
+  # Kayıt ayarları
+  recording:
+    enabled: false
+    location: "recordings/output.mp4"
+    max_duration: 3600        # Maksimum kayıt süresi (saniye)
+    split_duration: 300       # Dosya bölme süresi (saniye)
+    
+# Performans ayarları
+performance:
+  buffer_size: 200            # Buffer boyutu (kare)
+  max_latency: 200           # Maksimum gecikme (ms)
+  thread_count: 0            # 0 = otomatik
+  
+# Debug ayarları
+debug:
+  verbose: false
+  log_level: "INFO"           # DEBUG, INFO, WARNING, ERROR
+  save_logs: true
+  log_file: "logs/pipeline.log"
