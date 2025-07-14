@@ -1,0 +1,28 @@
+# Video Mosaic Configuration
+output:
+  width: 1920
+  height: 1080
+  
+layout:
+  grid_cols: 2
+  grid_rows: 2
+  cell_padding: 5
+  background_color: "#000000"
+  
+# Optional: predefined sources
+sources:
+  - name: "Camera1"
+    uri: "v4l2src device=/dev/video0"
+    position: [0, 0]
+  
+  - name: "TestPattern1"
+    uri: "videotestsrc pattern=smpte"
+    position: [1, 0]
+  
+  - name: "TestPattern2"
+    uri: "videotestsrc pattern=ball"
+    position: [0, 1]
+  
+  - name: "RTSP_Stream"
+    uri: "rtsp://localhost:8554/test"
+    position: [1, 1]
