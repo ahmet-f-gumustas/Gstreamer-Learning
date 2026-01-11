@@ -1,0 +1,55 @@
+# Video Frame Extractor Configuration
+
+# Input settings
+input:
+  # Video file path or URI
+  # Supported: local files, rtsp://, http://, https://
+  uri: "../data/sample_video.mp4"
+
+# Output settings
+output:
+  # Output directory for extracted frames
+  directory: "./frames"
+
+  # Filename prefix for extracted frames
+  prefix: "frame"
+
+  # Output format: png, jpeg, bmp
+  format: "png"
+
+  # JPEG quality (1-100, only used if format is jpeg)
+  jpeg_quality: 95
+
+  # Resize settings
+  resize:
+    enabled: false
+    width: 640
+    height: 480
+
+  # Add timestamp overlay to frames
+  timestamp_overlay: false
+
+# Extraction settings
+extraction:
+  # Extraction mode:
+  # - interval: Extract every N frames
+  # - keyframe: Extract only keyframes (I-frames)
+  # - all: Extract all frames
+  # - time_based: Extract at specific time intervals or timestamps
+  mode: "interval"
+
+  # Frame interval for 'interval' mode
+  interval_frames: 30
+
+  # Time interval in seconds for 'time_based' mode
+  interval_seconds: 1.0
+
+  # Specific timestamps (seconds) for 'time_based' mode
+  # timestamps:
+  #   - 0.0
+  #   - 5.0
+  #   - 10.0
+  #   - 15.0
+
+  # Maximum frames to extract (0 = unlimited)
+  max_frames: 0
