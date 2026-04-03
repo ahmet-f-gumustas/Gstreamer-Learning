@@ -1,6 +1,6 @@
 /**
  * @file video_processor.cpp
- * @brief Video işleme sınıfı implementasyonu
+ * @brief Video processing class implementation
  */
 
 #include "video_processor.h"
@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <chrono>
 
-// GStreamer base transform için sanal tablo
+// Virtual table for GStreamer base transform
 typedef struct {
     GstBaseTransformClass parent_class;
 } VideoProcessorClass;
@@ -19,7 +19,7 @@ typedef struct {
     VideoProcessor* processor;
 } VideoProcessorElement;
 
-// GObject tip tanımlamaları
+// GObject type definitions
 #define VIDEO_PROCESSOR_TYPE (video_processor_get_type())
 #define VIDEO_PROCESSOR(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), VIDEO_PROCESSOR_TYPE, VideoProcessorElement))
 
@@ -31,25 +31,25 @@ static gboolean video_processor_set_caps(GstBaseTransform* trans, GstCaps* incap
 static GstCaps* video_processor_transform_caps(GstBaseTransform* trans, GstPadDirection direction, GstCaps* caps, GstCaps* filter);
 
 /**
- * @brief GObject sınıf başlatma
+ * @brief GObject class initialization
  */
 static void video_processor_class_init(VideoProcessorClass* klass) {
     GstBaseTransformClass* base_transform_class = GST_BASE_TRANSFORM_CLASS(klass);
-    
-    // Transform fonksiyonlarını ayarla
+
+    // Set transform functions
     base_transform_class->transform = GST_DEBUG_FUNCPTR(video_processor_transform);
     base_transform_class->set_caps = GST_DEBUG_FUNCPTR(video_processor_set_caps);
     base_transform_class->transform_caps = GST_DEBUG_FUNCPTR(video_processor_transform_caps);
     
-    // In-place transform devre dışı (kopyalama gerekli)
+    // In-place transform disabled (copy required)
     base_transform_class->transform_ip_on_passthrough = FALSE;
 }
 
 /**
- * @brief GObject örnek başlatma
+ * @brief GObject instance initialization
  */
 static void video_processor_init(VideoProcessorElement* element) {
-    // Passthrough başlangıçta aktif
+    // Passthrough active by default
     gst_base_transform_set_passthrough(GST_BASE_TRANSFORM(element), TRUE);
 }
 
@@ -57,11 +57,11 @@ static void video_processor_init(VideoProcessorElement* element) {
  * @brief Constructor
  */
 VideoProcessor::VideoProcessor() {
-    // İstatistikleri sıfırla
+    // Reset statistics
     resetStats();
-    
+
 #ifdef HAVE_OPENCV
-    std::cout << "[VideoProcessor] OpenCV desteği etkin." << std::endl;
+    std::cout << "[VideoProcessor] OpenCV support enabled." << std::endl;
 #endif
 }
 
@@ -75,16 +75,16 @@ VideoProcessor::~VideoProcessor() {
 }
 
 /**
- * @brief GStreamer elementi oluşturur
+ * @brief Creates a GStreamer element
  */
 GstElement* VideoProcessor::createElement() {
-    // Custom element oluştur
+    // Create custom element
     element_ = g_object_new(VIDEO_PROCESSOR_TYPE, nullptr);
     
-    // VideoProcessor pointer'ını sakla
+    // Store VideoProcessor pointer
     VIDEO_PROCESSOR(element_)->processor = this;
     
-    // Element özelliklerini ayarla
+    // Set element properties
     gst_base_transform_set_in_place(GST_BASE_TRANSFORM(element_), FALSE);
     gst_base_transform_set_passthrough(GST_BASE_TRANSFORM(element_), 
                                       params_.filter_type == FilterType::NONE);
@@ -93,13 +93,13 @@ GstElement* VideoProcessor::createElement() {
 }
 
 /**
- * @brief İşleme parametrelerini ayarlar
+ * @brief Sets processing parameters
  */
 void VideoProcessor::setParameters(const ProcessingParams& params) {
     std::lock_guard<std::mutex> lock(params_mutex_);
     params_ = params;
     
-    // Passthrough modunu güncelle
+    // Update passthrough mode
     if (element_) {
         gst_base_transform_set_passthrough(GST_BASE_TRANSFORM(element_), 
                                           params_.filter_type == FilterType::NONE);
@@ -107,7 +107,7 @@ void VideoProcessor::setParameters(const ProcessingParams& params) {
 }
 
 /**
- * @brief Mevcut parametreleri döndürür
+ * @brief Returns current parameters
  */
 ProcessingParams VideoProcessor::getParameters() const {
     std::lock_guard<std::mutex> lock(params_mutex_);
@@ -115,7 +115,7 @@ ProcessingParams VideoProcessor::getParameters() const {
 }
 
 /**
- * @brief Filtre türünü değiştirir
+ * @brief Changes the filter type
  */
 void VideoProcessor::setFilter(FilterType type) {
     std::lock_guard<std::mutex> lock(params_mutex_);
@@ -128,14 +128,14 @@ void VideoProcessor::setFilter(FilterType type) {
 }
 
 /**
- * @brief Özel işleme callback'i ayarlar
+ * @brief Sets the custom processing callback
  */
 void VideoProcessor::setCustomProcessor(ProcessingCallback callback) {
     custom_processor_ = callback;
 }
 
 /**
- * @brief İstatistikleri döndürür
+ * @brief Returns statistics
  */
 ProcessingStats VideoProcessor::getStats() const {
     std::lock_guard<std::mutex> lock(stats_mutex_);
@@ -143,7 +143,7 @@ ProcessingStats VideoProcessor::getStats() const {
 }
 
 /**
- * @brief İstatistikleri sıfırlar
+ * @brief Resets statistics
  */
 void VideoProcessor::resetStats() {
     std::lock_guard<std::mutex> lock(stats_mutex_);
@@ -151,17 +151,17 @@ void VideoProcessor::resetStats() {
 }
 
 /**
- * @brief GPU hızlandırmayı ayarlar
+ * @brief Sets GPU acceleration
  */
 void VideoProcessor::setGPUAcceleration(bool enable) {
     gpu_enabled_ = enable;
     if (enable) {
-        std::cout << "[VideoProcessor] GPU hızlandırma etkinleştirildi." << std::endl;
+        std::cout << "[VideoProcessor] GPU acceleration enabled." << std::endl;
     }
 }
 
 /**
- * @brief Anlık görüntü alır
+ * @brief Takes a snapshot
  */
 bool VideoProcessor::takeSnapshot(const std::string& filename) {
     std::lock_guard<std::mutex> lock(snapshot_mutex_);
@@ -171,7 +171,7 @@ bool VideoProcessor::takeSnapshot(const std::string& filename) {
 }
 
 /**
- * @brief Meta veri ekler
+ * @brief Adds metadata
  */
 void VideoProcessor::addMetadata(const std::string& key, const std::string& value) {
     std::lock_guard<std::mutex> lock(metadata_mutex_);
@@ -179,50 +179,50 @@ void VideoProcessor::addMetadata(const std::string& key, const std::string& valu
 }
 
 /**
- * @brief Video karesini işler
+ * @brief Processes a video frame
  */
 GstBuffer* VideoProcessor::processFrame(GstBuffer* buffer, const GstVideoInfo* info) {
     auto start_time = std::chrono::high_resolution_clock::now();
     
-    // İstatistikleri güncelle
+    // Update statistics
     {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         stats_.frames_processed++;
     }
     
-    // Özel işleyici varsa kullan
+    // Use custom processor if available
     if (custom_processor_ && params_.filter_type == FilterType::CUSTOM) {
         return custom_processor_(buffer, info->width, info->height);
     }
     
-    // Buffer'ı map et
+    // Map the buffer
     GstMapInfo map;
     if (!gst_buffer_map(buffer, &map, GST_MAP_READWRITE)) {
         return buffer;
     }
     
 #ifdef HAVE_OPENCV
-    // OpenCV işleme
+    // OpenCV processing
     if (params_.filter_type != FilterType::NONE) {
         cv::Mat mat = bufferToMat(buffer, info);
         
-        // Filtre uygula
+        // Apply filter
         applyOpenCVFilter(mat, params_.filter_type);
         
-        // Anlık görüntü al
+        // Take snapshot
         if (take_snapshot_) {
             cv::imwrite(snapshot_filename_, mat);
             take_snapshot_ = false;
-            std::cout << "[VideoProcessor] Anlık görüntü kaydedildi: " 
+            std::cout << "[VideoProcessor] Snapshot saved: " 
                       << snapshot_filename_ << std::endl;
         }
         
-        // Mat'i buffer'a geri dönüştür
+        // Convert Mat back to buffer
         gst_buffer_unmap(buffer, &map);
         return matToBuffer(mat, info);
     }
 #else
-    // Basit CPU işleme
+    // Simple CPU processing
     switch (params_.filter_type) {
         case FilterType::GRAYSCALE:
             applyGrayscale(map.data, info);
@@ -240,12 +240,12 @@ GstBuffer* VideoProcessor::processFrame(GstBuffer* buffer, const GstVideoInfo* i
     
     gst_buffer_unmap(buffer, &map);
     
-    // İşleme süresini hesapla
+    // Calculate processing time
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
     double processing_time = duration.count() / 1000.0; // ms
     
-    // İstatistikleri güncelle
+    // Update statistics
     {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         processing_time_sum_ += processing_time;
@@ -258,27 +258,27 @@ GstBuffer* VideoProcessor::processFrame(GstBuffer* buffer, const GstVideoInfo* i
 }
 
 /**
- * @brief Gri tonlama filtresi uygular (CPU)
+ * @brief Applies grayscale filter (CPU)
  */
 void VideoProcessor::applyGrayscale(guint8* data, const GstVideoInfo* info) {
     int width = GST_VIDEO_INFO_WIDTH(info);
     int height = GST_VIDEO_INFO_HEIGHT(info);
     int stride = GST_VIDEO_INFO_PLANE_STRIDE(info, 0);
     
-    // I420 formatı için Y düzlemi zaten gri tonlama
-    // U ve V düzlemlerini 128'e ayarla (nötr renk)
+    // For I420 format, Y plane is already grayscale
+    // Set U and V planes to 128 (neutral color)
     if (GST_VIDEO_INFO_FORMAT(info) == GST_VIDEO_FORMAT_I420) {
         int y_size = stride * height;
         int uv_stride = GST_VIDEO_INFO_PLANE_STRIDE(info, 1);
         int uv_height = height / 2;
         
-        // U düzlemi
+        // U plane
         guint8* u_plane = data + y_size;
         for (int i = 0; i < uv_height; i++) {
             memset(u_plane + i * uv_stride, 128, width / 2);
         }
         
-        // V düzlemi
+        // V plane
         guint8* v_plane = u_plane + (uv_stride * uv_height);
         for (int i = 0; i < uv_height; i++) {
             memset(v_plane + i * uv_stride, 128, width / 2);
@@ -287,7 +287,7 @@ void VideoProcessor::applyGrayscale(guint8* data, const GstVideoInfo* info) {
 }
 
 /**
- * @brief Parlaklık/kontrast ayarı yapar (CPU)
+ * @brief Adjusts brightness/contrast (CPU)
  */
 void VideoProcessor::adjustBrightnessContrast(guint8* data, const GstVideoInfo* info) {
     int width = GST_VIDEO_INFO_WIDTH(info);
@@ -297,19 +297,19 @@ void VideoProcessor::adjustBrightnessContrast(guint8* data, const GstVideoInfo* 
     double brightness = params_.brightness;
     double contrast = params_.contrast;
     
-    // Y düzlemini işle (parlaklık)
+    // Process Y plane (brightness)
     for (int y = 0; y < height; y++) {
         guint8* row = data + y * stride;
         for (int x = 0; x < width; x++) {
             int pixel = row[x];
             
-            // Kontrast uygula
+            // Apply contrast
             pixel = (int)((pixel - 128) * contrast + 128);
             
-            // Parlaklık ekle
+            // Add brightness
             pixel += brightness;
             
-            // Sınırları kontrol et
+            // Check bounds
             row[x] = (guint8)CLAMP(pixel, 0, 255);
         }
     }
@@ -317,7 +317,7 @@ void VideoProcessor::adjustBrightnessContrast(guint8* data, const GstVideoInfo* 
 
 #ifdef HAVE_OPENCV
 /**
- * @brief Buffer'ı OpenCV Mat'e dönüştürür
+ * @brief Converts buffer to OpenCV Mat
  */
 cv::Mat VideoProcessor::bufferToMat(GstBuffer* buffer, const GstVideoInfo* info) {
     GstMapInfo map;
@@ -330,7 +330,7 @@ cv::Mat VideoProcessor::bufferToMat(GstBuffer* buffer, const GstVideoInfo* info)
     switch (GST_VIDEO_INFO_FORMAT(info)) {
         case GST_VIDEO_FORMAT_I420:
             {
-                // I420'dan BGR'ye dönüştür
+                // Convert I420 to BGR
                 cv::Mat yuv(height + height/2, width, CV_8UC1, map.data);
                 cv::cvtColor(yuv, mat, cv::COLOR_YUV2BGR_I420);
             }
@@ -346,7 +346,7 @@ cv::Mat VideoProcessor::bufferToMat(GstBuffer* buffer, const GstVideoInfo* info)
             break;
             
         default:
-            std::cerr << "[VideoProcessor] Desteklenmeyen video formatı!" << std::endl;
+            std::cerr << "[VideoProcessor] Unsupported video format!" << std::endl;
             mat = cv::Mat(height, width, CV_8UC3, cv::Scalar(0, 0, 0));
             break;
     }
@@ -356,7 +356,7 @@ cv::Mat VideoProcessor::bufferToMat(GstBuffer* buffer, const GstVideoInfo* info)
 }
 
 /**
- * @brief OpenCV Mat'i buffer'a dönüştürür
+ * @brief Converts OpenCV Mat to buffer
  */
 GstBuffer* VideoProcessor::matToBuffer(const cv::Mat& mat, const GstVideoInfo* info) {
     GstBuffer* buffer = gst_buffer_new_allocate(nullptr, 
@@ -371,7 +371,7 @@ GstBuffer* VideoProcessor::matToBuffer(const cv::Mat& mat, const GstVideoInfo* i
     switch (GST_VIDEO_INFO_FORMAT(info)) {
         case GST_VIDEO_FORMAT_I420:
             {
-                // BGR'den I420'ya dönüştür
+                // Convert BGR to I420
                 cv::Mat yuv;
                 cv::cvtColor(mat, yuv, cv::COLOR_BGR2YUV_I420);
                 memcpy(map.data, yuv.data, GST_VIDEO_INFO_SIZE(info));
@@ -399,7 +399,7 @@ GstBuffer* VideoProcessor::matToBuffer(const cv::Mat& mat, const GstVideoInfo* i
 }
 
 /**
- * @brief OpenCV tabanlı filtre uygular
+ * @brief Applies OpenCV-based filter
  */
 void VideoProcessor::applyOpenCVFilter(cv::Mat& mat, FilterType type) {
     switch (type) {
@@ -433,14 +433,14 @@ void VideoProcessor::applyOpenCVFilter(cv::Mat& mat, FilterType type) {
             break;
     }
     
-    // Döndürme uygula
+    // Apply rotation
     if (params_.rotation != 0) {
         cv::Point2f center(mat.cols / 2.0, mat.rows / 2.0);
         cv::Mat rot_mat = cv::getRotationMatrix2D(center, params_.rotation, 1.0);
         cv::warpAffine(mat, mat, rot_mat, mat.size());
     }
     
-    // Çevirme uygula
+    // Apply flip
     if (params_.flip_horizontal && params_.flip_vertical) {
         cv::flip(mat, mat, -1);
     } else if (params_.flip_horizontal) {
@@ -451,17 +451,17 @@ void VideoProcessor::applyOpenCVFilter(cv::Mat& mat, FilterType type) {
 }
 
 /**
- * @brief Bulanıklaştırma filtresi
+ * @brief Blur filter
  */
 void VideoProcessor::applyBlur(cv::Mat& mat) {
     int kernel_size = params_.blur_kernel_size;
-    if (kernel_size % 2 == 0) kernel_size++; // Tek sayı olmalı
+    if (kernel_size % 2 == 0) kernel_size++; // Must be odd
     
     cv::GaussianBlur(mat, mat, cv::Size(kernel_size, kernel_size), 0);
 }
 
 /**
- * @brief Keskinleştirme filtresi
+ * @brief Sharpening filter
  */
 void VideoProcessor::applySharpen(cv::Mat& mat) {
     cv::Mat kernel = (cv::Mat_<float>(3, 3) << 
@@ -473,7 +473,7 @@ void VideoProcessor::applySharpen(cv::Mat& mat) {
 }
 
 /**
- * @brief Kenar algılama filtresi
+ * @brief Edge detection filter
  */
 void VideoProcessor::applyEdgeDetection(cv::Mat& mat) {
     cv::Mat gray, edges;
@@ -481,13 +481,13 @@ void VideoProcessor::applyEdgeDetection(cv::Mat& mat) {
     
     cv::Canny(gray, edges, params_.edge_threshold1, params_.edge_threshold2);
     
-    // Kenarları renkli göster
+    // Show edges in color
     mat.setTo(cv::Scalar(0, 0, 0));
     mat.setTo(cv::Scalar(0, 255, 0), edges);
 }
 
 /**
- * @brief Gürültü azaltma filtresi
+ * @brief Noise reduction filter
  */
 void VideoProcessor::applyDenoise(cv::Mat& mat) {
     cv::fastNlMeansDenoisingColored(mat, mat, params_.denoise_strength, 
@@ -508,7 +508,7 @@ static GstFlowReturn video_processor_transform(GstBaseTransform* trans,
         return GST_FLOW_ERROR;
     }
     
-    // Video bilgisini al
+    // Get video info
     GstVideoInfo info;
     GstCaps* caps = gst_pad_get_current_caps(GST_BASE_TRANSFORM_SINK_PAD(trans));
     if (!gst_video_info_from_caps(&info, caps)) {
@@ -517,10 +517,10 @@ static GstFlowReturn video_processor_transform(GstBaseTransform* trans,
     }
     gst_caps_unref(caps);
     
-    // Kareyi işle
+    // Process frame
     GstBuffer* result = processor->processFrame(inbuf, &info);
     
-    // Sonucu kopyala
+    // Copy result
     if (result != inbuf) {
         gst_buffer_copy_into(outbuf, result, GST_BUFFER_COPY_ALL, 0, -1);
         gst_buffer_unref(result);
@@ -532,7 +532,7 @@ static GstFlowReturn video_processor_transform(GstBaseTransform* trans,
 }
 
 /**
- * @brief Caps ayarlama callback'i
+ * @brief Caps setting callback
  */
 static gboolean video_processor_set_caps(GstBaseTransform* trans,
                                        GstCaps* incaps,
@@ -544,7 +544,7 @@ static gboolean video_processor_set_caps(GstBaseTransform* trans,
         return FALSE;
     }
     
-    // Video bilgisini sakla
+    // Store video info
     GstVideoInfo info;
     if (gst_video_info_from_caps(&info, incaps)) {
         processor->video_info_ = info;
@@ -555,13 +555,13 @@ static gboolean video_processor_set_caps(GstBaseTransform* trans,
 }
 
 /**
- * @brief Transform caps callback'i
+ * @brief Transform caps callback
  */
 static GstCaps* video_processor_transform_caps(GstBaseTransform* trans,
                                              GstPadDirection direction,
                                              GstCaps* caps,
                                              GstCaps* filter) {
-    // Aynı caps'leri döndür (format değiştirmiyoruz)
+    // Return the same caps (we don't change the format)
     GstCaps* result = gst_caps_copy(caps);
     
     if (filter) {

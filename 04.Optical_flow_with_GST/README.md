@@ -1,25 +1,25 @@
 # GStreamer Optical Flow Detector
 
-Bu proje, **GStreamer** ve **OpenCV** kullanarak gerçek zamanlı optik akış (optical flow) algılama yapar. Lucas-Kanade algoritması ile video akışındaki hareket vektörlerini tespit eder ve görselleştirir.
+This project performs real-time optical flow detection using **GStreamer** and **OpenCV**. It detects and visualizes motion vectors in video streams using the Lucas-Kanade algorithm.
 
-## Özellikler
+## Features
 
-- 🎥 **Çoklu Video Kaynağı**: Webcam, video dosyası veya test pattern
-- 🔍 **Gerçek Zamanlı İşlem**: Düşük gecikme ile hareket algılama
-- 🎯 **Akıllı Nokta Seçimi**: Goodfeaturestrotrack ile otomatik köşe tespiti
-- 📊 **Görsel Feedback**: Hareket vektörleri ve izlenen noktalar
-- 🛠️ **Modüler Tasarım**: Kolay genişletilebilir kod yapısı
+- **Multiple Video Sources**: Webcam, video file, or test pattern
+- **Real-Time Processing**: Motion detection with low latency
+- **Smart Point Selection**: Automatic corner detection with goodFeaturesToTrack
+- **Visual Feedback**: Motion vectors and tracked points
+- **Modular Design**: Easily extensible code structure
 
-## Gereksinimler
+## Requirements
 
-### Sistem Gereksinimleri
-- Ubuntu 22.04+ veya benzer Linux dağıtımı
+### System Requirements
+- Ubuntu 22.04+ or similar Linux distribution
 - CMake 3.16+
-- GCC 11+ (C++17 desteği)
+- GCC 11+ (C++17 support)
 
-### Kütüphaneler
+### Libraries
 ```bash
-# GStreamer kütüphaneleri
+# GStreamer libraries
 sudo apt-get install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 sudo apt-get install libgstreamer-plugins-good1.0-dev libgstreamer-plugins-bad1.0-dev
 sudo apt-get install gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
@@ -28,200 +28,200 @@ sudo apt-get install gstreamer1.0-libav gstreamer1.0-tools
 # OpenCV
 sudo apt-get install libopencv-dev
 
-# V4L2 (webcam desteği)
+# V4L2 (webcam support)
 sudo apt-get install v4l-utils
 
-# Build araçları
+# Build tools
 sudo apt-get install cmake build-essential pkg-config
 ```
 
-## Kurulum
+## Installation
 
-1. **Proje Dizini Oluştur**
+1. **Create Project Directory**
 ```bash
 cd ~/git-projects/Gstreamer-Learning
 mkdir 04.optical_flow
 cd 04.optical_flow
 ```
 
-2. **Proje Yapısını Oluştur**
+2. **Create Project Structure**
 ```bash
 mkdir -p include src build
 ```
 
-3. **Dosyaları Yerleştir**
-- `CMakeLists.txt` → ana dizine
-- `OpticalFlowDetector.hpp`, `Utils.hpp` → `include/` dizinine
-- `OpticalFlowDetector.cpp`, `Utils.cpp`, `main.cpp` → `src/` dizinine
+3. **Place Files**
+- `CMakeLists.txt` -> root directory
+- `OpticalFlowDetector.hpp`, `Utils.hpp` -> `include/` directory
+- `OpticalFlowDetector.cpp`, `Utils.cpp`, `main.cpp` -> `src/` directory
 
-4. **Build İşlemi**
+4. **Build**
 ```bash
 cd build
 cmake ..
 make -j$(nproc)
 ```
 
-## Kullanım
+## Usage
 
-### Temel Kullanım
+### Basic Usage
 ```bash
-# Webcam ile çalıştır (varsayılan)
+# Run with webcam (default)
 ./optical-flow-detector
 
-# Test pattern ile çalıştır
+# Run with test pattern
 ./optical-flow-detector --test
 
-# Video dosyası ile çalıştır
+# Run with video file
 ./optical-flow-detector --file ../data/test_video.mp4
 ```
 
-### Komut Satırı Seçenekleri
+### Command Line Options
 ```bash
-./optical-flow-detector [seçenekler]
+./optical-flow-detector [options]
 
-Seçenekler:
-  -h, --help          Yardım mesajını göster
-  -f, --file <path>   Video dosyası kullan
-  -w, --webcam        Webcam kullan (varsayılan)
-  -t, --test          Test pattern kullan
+Options:
+  -h, --help          Show this help message
+  -f, --file <path>   Use a video file
+  -w, --webcam        Use webcam (default)
+  -t, --test          Use test pattern
 ```
 
-### Kontroller
-- **'q' tuşu**: Programdan çık
-- **Ctrl+C**: Güvenli şekilde sonlandır
+### Controls
+- **'q' key**: Quit the program
+- **Ctrl+C**: Terminate safely
 
-## Algoritma Detayları
+## Algorithm Details
 
-### Optical Flow Nedir?
-Optical Flow, video sekansındaki ardışık frameler arasında nesne hareket vektörlerini hesaplayan bir bilgisayar görü tekniğidir.
+### What is Optical Flow?
+Optical Flow is a computer vision technique that computes object motion vectors between consecutive frames in a video sequence.
 
-### Kullanılan Yöntem: Lucas-Kanade
-- **Sparse Optical Flow**: Sadece seçili noktalarda hareket hesaplar
-- **Pyramid Implementation**: Çoklu çözünürlük için hızlı hesaplama
-- **Feature Tracking**: Good features to track ile otomatik nokta seçimi
+### Method Used: Lucas-Kanade
+- **Sparse Optical Flow**: Computes motion only at selected points
+- **Pyramid Implementation**: Fast computation for multiple resolutions
+- **Feature Tracking**: Automatic point selection with Good Features to Track
 
-### İşlem Adımları
-1. **Frame Yakalama**: GStreamer ile video akışı
-2. **Gri Tonlama**: RGB → Grayscale dönüşümü
-3. **Köşe Tespiti**: Harris corner detection
-4. **Optical Flow**: Lucas-Kanade algoritması
-5. **Görselleştirme**: Hareket vektörleri ve noktalar
+### Processing Steps
+1. **Frame Capture**: Video stream via GStreamer
+2. **Grayscale Conversion**: RGB to Grayscale
+3. **Corner Detection**: Harris corner detection
+4. **Optical Flow**: Lucas-Kanade algorithm
+5. **Visualization**: Motion vectors and points
 
-## Proje Yapısı
+## Project Structure
 
 ```
 04.optical_flow/
-├── CMakeLists.txt              # Build konfigürasyonu
-├── README.md                   # Proje dokümantasyonu
+├── CMakeLists.txt              # Build configuration
+├── README.md                   # Project documentation
 ├── include/
-│   ├── OpticalFlowDetector.hpp # Ana sınıf header
-│   └── Utils.hpp               # Yardımcı fonksiyonlar
+│   ├── OpticalFlowDetector.hpp # Main class header
+│   └── Utils.hpp               # Helper functions
 ├── src/
-│   ├── main.cpp                # Ana program
-│   ├── OpticalFlowDetector.cpp # Optical flow implementasyonu
-│   └── Utils.cpp               # Utility implementasyonu
-├── build/                      # Build dosyaları
-└── test_videos/               # Test video dosyaları (isteğe bağlı)
+│   ├── main.cpp                # Main program
+│   ├── OpticalFlowDetector.cpp # Optical flow implementation
+│   └── Utils.cpp               # Utility implementation
+├── build/                      # Build files
+└── test_videos/               # Test video files (optional)
 ```
 
-## Teknik Detaylar
+## Technical Details
 
 ### GStreamer Pipeline
 ```
-Webcam Modu:
-v4l2src → videoconvert → appsink
+Webcam Mode:
+v4l2src -> videoconvert -> appsink
 
-Test Modu:
-videotestsrc → videoconvert → appsink
+Test Mode:
+videotestsrc -> videoconvert -> appsink
 
-Dosya Modu:
-filesrc → qtdemux → avdec_h264 → videoconvert → appsink
+File Mode:
+filesrc -> qtdemux -> avdec_h264 -> videoconvert -> appsink
 ```
 
-### OpenCV İşlem Zinciri
-1. **goodFeaturesToTrack()**: Köşe noktalarını tespit et
+### OpenCV Processing Chain
+1. **goodFeaturesToTrack()**: Detect corner points
 2. **calcOpticalFlowPyrLK()**: Lucas-Kanade optical flow
-3. **arrowedLine()**: Hareket vektörlerini çiz
-4. **circle()**: İzlenen noktaları göster
+3. **arrowedLine()**: Draw motion vectors
+4. **circle()**: Display tracked points
 
-### Parametreler
+### Parameters
 ```cpp
-maxCorners = 100;        // Maksimum izlenecek nokta sayısı
-qualityLevel = 0.01;     // Köşe kalite eşiği
-minDistance = 10.0;      // Noktalar arası minimum mesafe
+maxCorners = 100;        // Maximum number of points to track
+qualityLevel = 0.01;     // Corner quality threshold
+minDistance = 10.0;      // Minimum distance between points
 ```
 
-## Performans İpuçları
+## Performance Tips
 
-### CPU Optimizasyonu
-- Frame boyutunu düşürün (640x480 önerilen)
-- maxCorners değerini azaltın
-- ROI (Region of Interest) kullanın
+### CPU Optimization
+- Reduce frame size (640x480 recommended)
+- Decrease maxCorners value
+- Use ROI (Region of Interest)
 
-### Bellek Optimizasyonu
-- AppSink buffer sayısını sınırlandırın
-- Mat clone() işlemlerini minimize edin
-- Gereksiz format dönüşümlerinden kaçının
+### Memory Optimization
+- Limit AppSink buffer count
+- Minimize Mat clone() operations
+- Avoid unnecessary format conversions
 
-## Sorun Giderme
+## Troubleshooting
 
-### Webcam Bulunamıyor
+### Webcam Not Found
 ```bash
-# Mevcut video cihazları kontrol et
+# Check available video devices
 ls /dev/video*
 v4l2-ctl --list-devices
 
-# Webcam testi
+# Webcam test
 gst-launch-1.0 v4l2src ! videoconvert ! xvimagesink
 ```
 
-### Build Hataları
+### Build Errors
 ```bash
-# GStreamer paketlerini kontrol et
+# Check GStreamer packages
 pkg-config --cflags --libs gstreamer-1.0
 
-# OpenCV kurulumunu kontrol et
+# Check OpenCV installation
 pkg-config --modversion opencv4
 ```
 
 ### Permission Denied
 ```bash
-# Video cihaz izinlerini kontrol et
+# Check video device permissions
 ls -l /dev/video0
 sudo usermod -a -G video $USER
-# Logout/login gerekli
+# Logout/login required
 ```
 
-## Gelişmiş Özellikler
+## Advanced Features
 
-### Özelleştirme Seçenekleri
-- Farklı optical flow algoritmaları (Farneback, etc.)
-- ROI tabanlı işlem
-- Çoklu nesne takibi
-- Hareket analizi ve istatistikler
+### Customization Options
+- Different optical flow algorithms (Farneback, etc.)
+- ROI-based processing
+- Multi-object tracking
+- Motion analysis and statistics
 
-### Genişletme Fikirleri
-- Nesne tespiti entegrasyonu
-- Hareket tabanlı alarm sistemi
-- Video stabilizasyonu
+### Extension Ideas
+- Object detection integration
+- Motion-based alarm system
+- Video stabilization
 - Background subtraction
 
-## Katkıda Bulunma
+## Contributing
 
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Commit yapın (`git commit -m 'Add amazing feature'`)
-4. Push yapın (`git push origin feature/amazing-feature`)
-5. Pull Request açın
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Lisans
+## License
 
-Bu proje MIT lisansı altında dağıtılmaktadır. Detaylar için `LICENSE` dosyasına bakın.
+This project is distributed under the MIT license. See the `LICENSE` file for details.
 
-## İletişim
+## Contact
 
-Sorularınız için GitHub issues kullanabilirsiniz.
+For questions, please use GitHub issues.
 
 ---
 
-**Happy Coding! 🚀**
+**Happy Coding!**

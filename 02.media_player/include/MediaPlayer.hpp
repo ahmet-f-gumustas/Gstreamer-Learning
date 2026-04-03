@@ -11,32 +11,32 @@ public:
     MediaPlayer();
     ~MediaPlayer();
 
-    // Dosya açma
+    // Open file
     bool openFile(const std::string& filePath);
     
-    // Temel kontroller
+    // Basic controls
     bool play();
     bool pause();
     bool stop();
     bool isPlaying() const;
     bool isPaused() const;
     
-    // Konum fonksiyonları
+    // Position functions
     bool seek(gint64 position);
     bool seekRelative(gint64 offset);
     gint64 getPosition() const;
     gint64 getDuration() const;
     
-    // Medya bilgileri
+    // Media information
     std::string getMediaInfo() const;
     
 private:
-    // GStreamer yapıları
+    // GStreamer structures
     GstElement *pipeline;
     GstBus *bus;
     guint busWatchId;
     
-    // Durum değişkenleri
+    // State variables
     enum class State {
         STOPPED,
         PLAYING,
@@ -48,10 +48,10 @@ private:
     // Bus callback
     static gboolean busCallback(GstBus *bus, GstMessage *message, gpointer data);
     
-    // Pipeline oluşturma
+    // Pipeline creation
     bool buildPipeline(const std::string& filePath);
     
-    // Temizleme
+    // Cleanup
     void cleanup();
 };
 

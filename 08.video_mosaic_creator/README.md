@@ -1,49 +1,49 @@
 # Video Mosaic Creator
 
-GStreamer tabanlı, birden fazla video kaynağını tek bir mozaik görüntüde birleştiren profesyonel video işleme uygulaması.
+A professional video processing application based on GStreamer that combines multiple video sources into a single mosaic display.
 
-## 🎯 Proje Özeti
+## Project Overview
 
-Video Mosaic Creator, güvenlik sistemleri, canlı yayınlar, video konferans uygulamaları ve çoklu video izleme senaryoları için tasarlanmış güçlü bir video birleştirme aracıdır. GStreamer'ın compositor elementini kullanarak yüksek performanslı video işleme sağlar.
+Video Mosaic Creator is a powerful video compositing tool designed for security systems, live broadcasts, video conferencing applications, and multi-video monitoring scenarios. It provides high-performance video processing using GStreamer's compositor element.
 
-## ✨ Özellikler
+## Features
 
-### Temel Özellikler
-- **Çoklu Video Kaynağı Desteği**
-  - Web kameraları (V4L2)
-  - RTSP akışları
-  - Video dosyaları (MP4, AVI, MKV vb.)
-  - HTTP/HTTPS video akışları
-  - Test pattern'leri (geliştirme için)
+### Core Features
+- **Multiple Video Source Support**
+  - Web cameras (V4L2)
+  - RTSP streams
+  - Video files (MP4, AVI, MKV, etc.)
+  - HTTP/HTTPS video streams
+  - Test patterns (for development)
 
-- **Esnek Grid Layout Sistemi**
-  - 2x2, 3x3, 4x4 ve özel grid boyutları
-  - Dinamik hücre boyutlandırma
-  - Özelleştirilebilir padding ve arka plan
+- **Flexible Grid Layout System**
+  - 2x2, 3x3, 4x4, and custom grid sizes
+  - Dynamic cell sizing
+  - Customizable padding and background
 
-- **Yüksek Performans**
+- **High Performance**
   - Hardware accelerated video decoding
-  - Düşük gecikme (low-latency) modu
-  - CPU kullanımı optimizasyonu
+  - Low-latency mode
+  - CPU usage optimization
 
-### Gelişmiş Özellikler
-- YAML tabanlı konfigürasyon sistemi
-- Runtime'da kaynak ekleme/çıkarma
-- Otomatik yeniden bağlanma (RTSP kaynakları için)
-- Hata yönetimi ve logging
+### Advanced Features
+- YAML-based configuration system
+- Runtime source addition/removal
+- Automatic reconnection (for RTSP sources)
+- Error handling and logging
 
-## 🛠️ Teknik Gereksinimler
+## Technical Requirements
 
-### Sistem Gereksinimleri
-- Ubuntu 20.04+ veya benzeri Linux dağıtımı
-- GCC 9.0+ veya Clang 10.0+
+### System Requirements
+- Ubuntu 20.04+ or similar Linux distribution
+- GCC 9.0+ or Clang 10.0+
 - CMake 3.16+
-- En az 4GB RAM (8GB önerilir)
-- NVIDIA GPU (opsiyonel, hardware acceleration için)
+- At least 4GB RAM (8GB recommended)
+- NVIDIA GPU (optional, for hardware acceleration)
 
-### Bağımlılıklar
+### Dependencies
 ```bash
-# GStreamer ve geliştirme paketleri
+# GStreamer and development packages
 sudo apt-get update
 sudo apt-get install -y \
     libgstreamer1.0-dev \
@@ -60,54 +60,54 @@ sudo apt-get install -y \
     gstreamer1.0-qt5 \
     gstreamer1.0-pulseaudio
 
-# OpenCV (opsiyonel, gelişmiş özellikler için)
+# OpenCV (optional, for advanced features)
 sudo apt-get install -y libopencv-dev
 
-# YAML konfigürasyon desteği
+# YAML configuration support
 sudo apt-get install -y libyaml-cpp-dev
 
-# Derleme araçları
+# Build tools
 sudo apt-get install -y build-essential pkg-config
 ```
 
-## 📦 Kurulum
+## Installation
 
-### 1. Projeyi Klonlayın
+### 1. Clone the Project
 ```bash
 cd ~/git-projects/Gstreamer-Learning
 mkdir 08.Video_Mosaic_Creator
 cd 08.Video_Mosaic_Creator
-# Proje dosyalarını buraya kopyalayın
+# Copy project files here
 ```
 
-### 2. Derleme
+### 2. Build
 ```bash
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j$(nproc)
 ```
 
-### 3. Debug Build (Geliştirme için)
+### 3. Debug Build (for Development)
 ```bash
 mkdir build-debug && cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j$(nproc)
 ```
 
-## 🚀 Kullanım
+## Usage
 
-### Temel Kullanım
+### Basic Usage
 ```bash
-# Varsayılan konfigürasyon ile çalıştırma
+# Run with default configuration
 ./video-mosaic-creator
 
-# Özel konfigürasyon dosyası ile
+# Run with a custom configuration file
 ./video-mosaic-creator config/my_mosaic.yaml
 ```
 
-### Örnek Senaryolar
+### Example Scenarios
 
-#### 1. Güvenlik Kamera Sistemi (4 Kamera)
+#### 1. Security Camera System (4 Cameras)
 ```yaml
 # config/security_cameras.yaml
 output:
@@ -138,7 +138,7 @@ sources:
     position: [1, 1]
 ```
 
-#### 2. Video Konferans (3x3 Grid)
+#### 2. Video Conference (3x3 Grid)
 ```yaml
 # config/video_conference.yaml
 output:
@@ -152,88 +152,88 @@ layout:
   background_color: "#2d2d2d"
 ```
 
-#### 3. Test ve Geliştirme
+#### 3. Testing and Development
 ```bash
-# Test pattern'leri ile hızlı test
+# Quick test with test patterns
 ./video-mosaic-creator
 
-# Programatik olarak kaynak ekleme örneği kodda mevcuttur
+# Programmatic source addition examples are available in the code
 ```
 
-### Komut Satırı Parametreleri
+### Command Line Parameters
 ```bash
 ./video-mosaic-creator [options]
-  -c, --config <file>     Konfigürasyon dosyası
-  -v, --verbose          Detaylı log çıktısı
-  -h, --help             Yardım mesajı
+  -c, --config <file>     Configuration file
+  -v, --verbose          Detailed log output
+  -h, --help             Help message
 ```
 
-## 🏗️ Mimari
+## Architecture
 
-### Pipeline Yapısı
+### Pipeline Structure
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Video Mosaic Pipeline                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────┐   ┌──────────┐   ┌───────────┐               │
-│  │  Source  │──▶│ Decoder  │──▶│ Converter │──┐            │
-│  └──────────┘   └──────────┘   └───────────┘  │            │
-│                                                 ▼            │
-│  ┌──────────┐   ┌──────────┐   ┌───────────┐  ┌────────┐   │
-│  │  Source  │──▶│ Decoder  │──▶│ Converter │─▶│        │   │
-│  └──────────┘   └──────────┘   └───────────┘  │ Compo- │   │
-│                                                 │ sitor  │──▶│ Display
-│  ┌──────────┐   ┌──────────┐   ┌───────────┐  │        │   │
-│  │  Source  │──▶│ Decoder  │──▶│ Converter │─▶│        │   │
-│  └──────────┘   └──────────┘   └───────────┘  └────────┘   │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|                      Video Mosaic Pipeline                   |
++-------------------------------------------------------------+
+|                                                              |
+|  +----------+   +----------+   +-----------+                 |
+|  |  Source  |--->| Decoder  |--->| Converter |---+            |
+|  +----------+   +----------+   +-----------+   |            |
+|                                                 v            |
+|  +----------+   +----------+   +-----------+  +--------+    |
+|  |  Source  |--->| Decoder  |--->| Converter |->|        |    |
+|  +----------+   +----------+   +-----------+  | Compo- |    |
+|                                                | sitor  |--->| Display
+|  +----------+   +----------+   +-----------+  |        |    |
+|  |  Source  |--->| Decoder  |--->| Converter |->|        |    |
+|  +----------+   +----------+   +-----------+  +--------+    |
+|                                                              |
++-------------------------------------------------------------+
 ```
 
-### Sınıf Diyagramı
+### Class Diagram
 ```
 VideoMosaic
-    ├── InputManager
-    │   └── VideoInput[]
-    │       ├── source
-    │       ├── decoder
-    │       ├── converter
-    │       └── scaler
-    └── MosaicLayout
-        └── LayoutConfig
+    +-- InputManager
+    |   +-- VideoInput[]
+    |       +-- source
+    |       +-- decoder
+    |       +-- converter
+    |       +-- scaler
+    +-- MosaicLayout
+        +-- LayoutConfig
 ```
 
-## 🔧 Geliştirme
+## Development
 
-### Kod Yapısı
+### Code Structure
 ```
 src/
-├── main.cpp              # Ana program giriş noktası
-├── video_mosaic.cpp      # Ana pipeline yönetimi
-├── input_manager.cpp     # Video kaynak yönetimi
-└── mosaic_layout.cpp     # Grid layout hesaplamaları
++-- main.cpp              # Main program entry point
++-- video_mosaic.cpp      # Main pipeline management
++-- input_manager.cpp     # Video source management
++-- mosaic_layout.cpp     # Grid layout calculations
 
 include/
-├── video_mosaic.h        # VideoMosaic sınıfı
-├── input_manager.h       # InputManager sınıfı
-└── mosaic_layout.h       # MosaicLayout sınıfı
++-- video_mosaic.h        # VideoMosaic class
++-- input_manager.h       # InputManager class
++-- mosaic_layout.h       # MosaicLayout class
 ```
 
-### Yeni Özellik Ekleme
+### Adding New Features
 
-#### 1. Yeni Video Kaynağı Tipi Ekleme
+#### 1. Adding a New Video Source Type
 ```cpp
-// input_manager.cpp içinde createSourceElement() fonksiyonuna ekleyin
-else if (uri.find("yeni_protokol://") == 0) {
-    source = gst_element_factory_make("yeni_element", nullptr);
-    // Konfigürasyon...
+// Add to the createSourceElement() function in input_manager.cpp
+else if (uri.find("new_protocol://") == 0) {
+    source = gst_element_factory_make("new_element", nullptr);
+    // Configuration...
 }
 ```
 
-#### 2. Overlay Text Ekleme
+#### 2. Adding Overlay Text
 ```cpp
-// Her video üzerine isim yazdırma
+// Display name on each video
 GstElement* textoverlay = gst_element_factory_make("textoverlay", nullptr);
 g_object_set(textoverlay, 
     "text", input->name.c_str(),
@@ -242,101 +242,101 @@ g_object_set(textoverlay,
     nullptr);
 ```
 
-## 🎮 Gelişmiş Kullanım Örnekleri
+## Advanced Usage Examples
 
-### RTSP Sunucu Entegrasyonu
+### RTSP Server Integration
 ```cpp
-// Mozaik çıktısını RTSP üzerinden yayınlama
+// Stream the mosaic output over RTSP
 GstElement* rtsp_sink = gst_element_factory_make("rtspclientsink", nullptr);
 g_object_set(rtsp_sink, "location", "rtsp://localhost:8554/mosaic", nullptr);
 ```
 
-### Kayıt Özelliği
+### Recording Feature
 ```cpp
-// Mozaik çıktısını dosyaya kaydetme
+// Save the mosaic output to a file
 GstElement* filesink = gst_element_factory_make("filesink", nullptr);
 g_object_set(filesink, "location", "output_mosaic.mp4", nullptr);
 ```
 
 ### Motion Detection
 ```cpp
-// Her kaynağa motion detection ekleme
+// Add motion detection to each source
 GstElement* motion = gst_element_factory_make("motioncells", nullptr);
 g_object_set(motion, "sensitivity", 0.5, nullptr);
 ```
 
-## 🐛 Sorun Giderme
+## Troubleshooting
 
-### Yaygın Hatalar ve Çözümleri
+### Common Errors and Solutions
 
-1. **"Failed to create pipeline" hatası**
+1. **"Failed to create pipeline" error**
    ```bash
-   # GStreamer kurulumunu kontrol edin
+   # Check GStreamer installation
    gst-inspect-1.0 | grep compositor
    ```
 
-2. **RTSP bağlantı sorunları**
+2. **RTSP connection issues**
    ```bash
-   # RTSP kaynağını test edin
+   # Test the RTSP source
    gst-launch-1.0 rtspsrc location=rtsp://... ! fakesink
    ```
 
-3. **Performans sorunları**
-   - Hardware decoding'i etkinleştirin
-   - Grid boyutunu azaltın
-   - Video çözünürlüğünü düşürün
+3. **Performance issues**
+   - Enable hardware decoding
+   - Reduce grid size
+   - Lower video resolution
 
-### Debug Logları
+### Debug Logs
 ```bash
-# Detaylı GStreamer logları
+# Detailed GStreamer logs
 GST_DEBUG=3 ./video-mosaic-creator
 
-# Sadece compositor logları
+# Compositor logs only
 GST_DEBUG=compositor:5 ./video-mosaic-creator
 ```
 
-## 📊 Performans İpuçları
+## Performance Tips
 
 1. **Hardware Acceleration**
    ```cpp
-   // NVIDIA hardware decoder kullanımı
+   // Use NVIDIA hardware decoder
    decoder = gst_element_factory_make("nvv4l2decoder", nullptr);
    ```
 
-2. **Buffer Optimizasyonu**
+2. **Buffer Optimization**
    ```cpp
    g_object_set(source, "buffer-size", 2048000, nullptr);
    ```
 
-3. **Thread Kullanımı**
+3. **Thread Usage**
    ```cpp
    g_object_set(pipeline, "max-threads", 4, nullptr);
    ```
 
-## 🤝 Katkıda Bulunma
+## Contributing
 
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Değişikliklerinizi commit edin (`git commit -m 'Add amazing feature'`)
-4. Branch'e push yapın (`git push origin feature/amazing-feature`)
-5. Pull Request açın
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 📄 Lisans
+## License
 
-Bu proje MIT lisansı altında lisanslanmıştır.
+This project is licensed under the MIT License.
 
-## 🔗 Faydalı Kaynaklar
+## Useful Resources
 
 - [GStreamer Documentation](https://gstreamer.freedesktop.org/documentation/)
 - [GStreamer Compositor Plugin](https://gstreamer.freedesktop.org/documentation/compositor/)
 - [YAML-CPP Documentation](https://github.com/jbeder/yaml-cpp/wiki)
 
-## 💡 Gelecek Geliştirmeler
+## Future Improvements
 
-- [ ] Web arayüzü ile kontrol
-- [ ] Dinamik layout değiştirme
-- [ ] Audio mixing desteği
-- [ ] AI tabanlı sahne algılama
-- [ ] Cloud streaming desteği
-- [ ] Docker container desteği
-- [ ] Prometheus metrics entegrasyonu
+- [ ] Web interface for control
+- [ ] Dynamic layout switching
+- [ ] Audio mixing support
+- [ ] AI-based scene detection
+- [ ] Cloud streaming support
+- [ ] Docker container support
+- [ ] Prometheus metrics integration

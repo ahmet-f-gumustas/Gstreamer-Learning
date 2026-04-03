@@ -1,48 +1,48 @@
 # Video Frame Extractor
 
-A professional application based on GStreamer and OpenCV that extracts frames from video files or streams.
+GStreamer ve OpenCV tabanlı, video dosyalarından veya akışlardan kare (frame) cikaran profesyonel bir uygulama.
 
-## Project Overview
+## Proje Ozeti
 
-Video Frame Extractor is a tool designed for video analysis, machine learning dataset preparation, video summary generation, and similar scenarios. It performs high-performance frame extraction using GStreamer's appsink element.
+Video Frame Extractor, video analizi, makine ogrenimi veri seti hazirlama, video ozet olusturma ve benzeri senaryolar icin tasarlanmis bir aractir. GStreamer'in appsink elementini kullanarak yuksek performansli frame cikarma islemi gerceklestirir.
 
-## Features
+## Ozellikler
 
-### Core Features
-- **Multiple Video Source Support**
-  - Video files (MP4, AVI, MKV, WebM, etc.)
-  - RTSP streams (IP cameras)
-  - HTTP/HTTPS video streams
+### Temel Ozellikler
+- **Coklu Video Kaynagi Destegi**
+  - Video dosyalari (MP4, AVI, MKV, WebM vb.)
+  - RTSP akislari (IP kameralar)
+  - HTTP/HTTPS video akislari
 
-- **Flexible Extraction Modes**
-  - `interval`: Extract at fixed frame intervals (e.g., every 30 frames)
-  - `keyframe`: Extract only keyframes (I-frames)
-  - `all`: Extract all frames
-  - `time_based`: Time-based extraction (e.g., every 5 seconds)
+- **Esnek Cikarma Modlari**
+  - `interval`: Belirli frame araliklarinda cikarma (ornegin her 30 frame'de bir)
+  - `keyframe`: Sadece anahtar kareleri (I-frame) cikarma
+  - `all`: Tum frame'leri cikarma
+  - `time_based`: Zaman tabanli cikarma (ornegin her 5 saniyede bir)
 
-- **Output Formats**
-  - PNG (lossless)
-  - JPEG (adjustable quality)
+- **Cikti Formatlari**
+  - PNG (kayipsiz)
+  - JPEG (ayarlanabilir kalite)
   - BMP
 
-### Advanced Features
-- YAML-based configuration system
-- Command line parameters
-- Frame resizing
-- Timestamp overlay
-- Custom frame callback function
-- Progress indicator
+### Gelismis Ozellikler
+- YAML tabanli konfigurasyon sistemi
+- Komut satiri parametreleri
+- Frame boyutlandirma (resize)
+- Zaman damgasi overlay
+- Ozel frame callback fonksiyonu
+- Ilerleme gostergesi
 
-## Technical Requirements
+## Teknik Gereksinimler
 
-### System Requirements
-- Ubuntu 20.04+ or similar Linux distribution
-- GCC 9.0+ or Clang 10.0+
+### Sistem Gereksinimleri
+- Ubuntu 20.04+ veya benzeri Linux dagitimi
+- GCC 9.0+ veya Clang 10.0+
 - CMake 3.16+
 
-### Dependencies
+### Bagimliliklar
 ```bash
-# GStreamer and development packages
+# GStreamer ve gelistirme paketleri
 sudo apt-get update
 sudo apt-get install -y \
     libgstreamer1.0-dev \
@@ -56,16 +56,16 @@ sudo apt-get install -y \
 # OpenCV
 sudo apt-get install -y libopencv-dev
 
-# YAML configuration support
+# YAML konfigurasyon destegi
 sudo apt-get install -y libyaml-cpp-dev
 
-# Build tools
+# Derleme araclari
 sudo apt-get install -y build-essential pkg-config cmake
 ```
 
-## Installation
+## Kurulum
 
-### 1. Build
+### 1. Derleme
 ```bash
 cd 09.video_frame_extractor
 mkdir build && cd build
@@ -73,53 +73,53 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j$(nproc)
 ```
 
-### 2. Debug Build (for Development)
+### 2. Debug Build (Gelistirme icin)
 ```bash
 mkdir build-debug && cd build-debug
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j$(nproc)
 ```
 
-## Usage
+## Kullanim
 
-### Basic Usage
+### Temel Kullanim
 ```bash
-# Extract every 30th frame from a video file
+# Video dosyasindan her 30 frame'de bir cikarma
 ./video-frame-extractor -i video.mp4 -o ./frames -m interval -n 30
 
-# Extract every 5 seconds from an RTSP stream
+# RTSP akisindan her 5 saniyede bir cikarma
 ./video-frame-extractor -i rtsp://192.168.1.100:554/stream -m time_based -t 5.0
 
-# Run with a configuration file
+# Konfigurasyon dosyasi ile calistirma
 ./video-frame-extractor -c ../config/config.yaml
 ```
 
-### Command Line Parameters
+### Komut Satiri Parametreleri
 ```
-Usage: video-frame-extractor [options]
+Kullanim: video-frame-extractor [secenekler]
 
-Options:
-  -i, --input <path>      Input video file or URI (required)
-  -o, --output <dir>      Output directory (default: ./frames)
-  -c, --config <file>     Configuration file (YAML)
-  -m, --mode <mode>       Extraction mode: interval, keyframe, all, time_based
-  -n, --interval <num>    Frame interval for 'interval' mode (default: 30)
-  -t, --time <seconds>    Time interval for 'time_based' mode (default: 1.0)
-  -f, --format <fmt>      Output format: png, jpeg, bmp (default: png)
-  -q, --quality <num>     JPEG quality 1-100 (default: 95)
-  -x, --max <num>         Maximum number of frames to extract (default: unlimited)
-  -p, --prefix <name>     Output filename prefix (default: frame)
-  -r, --resize <WxH>      Resize output (e.g., 640x480)
-  --timestamp             Add timestamp to frames
-  -v, --verbose           Verbose output
-  -h, --help              Show this help message
+Secenekler:
+  -i, --input <path>      Girdi video dosyasi veya URI (zorunlu)
+  -o, --output <dir>      Cikti dizini (varsayilan: ./frames)
+  -c, --config <file>     Konfigurasyon dosyasi (YAML)
+  -m, --mode <mode>       Cikarma modu: interval, keyframe, all, time_based
+  -n, --interval <num>    'interval' modu icin frame araligi (varsayilan: 30)
+  -t, --time <seconds>    'time_based' modu icin zaman araligi (varsayilan: 1.0)
+  -f, --format <fmt>      Cikti formati: png, jpeg, bmp (varsayilan: png)
+  -q, --quality <num>     JPEG kalitesi 1-100 (varsayilan: 95)
+  -x, --max <num>         Maksimum cikarilacak frame sayisi (varsayilan: sinirsiz)
+  -p, --prefix <name>     Cikti dosya on eki (varsayilan: frame)
+  -r, --resize <WxH>      Ciktiyi yeniden boyutlandir (ornegin: 640x480)
+  --timestamp             Frame'lere zaman damgasi ekle
+  -v, --verbose           Detayli cikti
+  -h, --help              Bu yardim mesajini goster
 ```
 
-### Example Scenarios
+### Ornek Senaryolar
 
-#### 1. Machine Learning Dataset Preparation
+#### 1. Makine Ogrenimi Veri Seti Hazirlama
 ```bash
-# Save as 640x480 JPEG every 1 second
+# Her 1 saniyede bir 640x480 boyutunda JPEG olarak kaydet
 ./video-frame-extractor \
     -i training_video.mp4 \
     -o ./dataset/images \
@@ -130,9 +130,9 @@ Options:
     -r 640x480
 ```
 
-#### 2. Video Summary Generation
+#### 2. Video Ozet Olusturma
 ```bash
-# Extract the first 100 keyframes
+# Ilk 100 anahtar kareyi cikar
 ./video-frame-extractor \
     -i documentary.mkv \
     -o ./thumbnails \
@@ -141,9 +141,9 @@ Options:
     -f png
 ```
 
-#### 3. Security Camera Recording
+#### 3. Guvenlik Kamerasi Kaydi
 ```bash
-# Capture a frame every 10 seconds from an RTSP stream
+# RTSP akisindan her 10 saniyede bir frame al
 ./video-frame-extractor \
     -i rtsp://camera:554/stream \
     -o ./security_frames \
@@ -152,10 +152,10 @@ Options:
     --timestamp
 ```
 
-## Configuration File
+## Konfigurasyon Dosyasi
 
 ```yaml
-# config.yaml example
+# config.yaml ornegi
 input:
   uri: "../data/sample_video.mp4"
 
@@ -177,9 +177,9 @@ extraction:
   max_frames: 0
 ```
 
-## Architecture
+## Mimari
 
-### Pipeline Structure
+### Pipeline Yapisi
 ```
 +------------+     +----------+     +--------------+     +---------+
 | Video      | --> | Decoder  | --> | Video        | --> | AppSink |
@@ -199,23 +199,23 @@ extraction:
                                                     +------------------+
 ```
 
-### Code Structure
+### Kod Yapisi
 ```
 09.video_frame_extractor/
-+-- CMakeLists.txt
-+-- README.md
-+-- config/
-|   +-- config.yaml
-+-- include/
-|   +-- frame_extractor.h
-+-- src/
-    +-- main.cpp
-    +-- frame_extractor.cpp
+├── CMakeLists.txt
+├── README.md
+├── config/
+│   └── config.yaml
+├── include/
+│   └── frame_extractor.h
+└── src/
+    ├── main.cpp
+    └── frame_extractor.cpp
 ```
 
-## API Usage
+## API Kullanimi
 
-To use the project as a library:
+Projeyi kutuphane olarak kullanmak icin:
 
 ```cpp
 #include "frame_extractor.h"
@@ -232,9 +232,9 @@ int main() {
 
     FrameExtractor extractor;
 
-    // Add a custom frame processing callback
+    // Ozel frame isleme callback'i ekle
     extractor.setFrameCallback([](const cv::Mat& frame, int64_t pts, int frame_num) {
-        // Face recognition, object detection, and other processing can be done here
+        // Yuz tanima, nesne algilama vb. islemler yapilabilir
     });
 
     if (!extractor.initialize(config)) {
@@ -248,49 +248,49 @@ int main() {
 }
 ```
 
-## Troubleshooting
+## Sorun Giderme
 
-### Common Errors
+### Yaygin Hatalar
 
-1. **"Failed to create pipeline" error**
+1. **"Failed to create pipeline" hatasi**
    ```bash
-   # Check GStreamer installation
+   # GStreamer kurulumunu kontrol edin
    gst-inspect-1.0 --version
    ```
 
-2. **"No video decoder found" error**
+2. **"No video decoder found" hatasi**
    ```bash
-   # Install the required codecs
+   # Gerekli codec'leri yukleyin
    sudo apt-get install gstreamer1.0-plugins-ugly gstreamer1.0-libav
    ```
 
-3. **RTSP connection issues**
+3. **RTSP baglanti sorunlari**
    ```bash
-   # Test the RTSP source
+   # RTSP kaynagini test edin
    gst-launch-1.0 rtspsrc location=rtsp://... ! fakesink
    ```
 
-### Debug Logs
+### Debug Loglari
 ```bash
-# Detailed GStreamer logs
+# Detayli GStreamer loglari
 GST_DEBUG=3 ./video-frame-extractor -i video.mp4
 
-# AppSink logs only
+# Sadece appsink loglari
 GST_DEBUG=appsink:5 ./video-frame-extractor -i video.mp4
 ```
 
-## Performance Tips
+## Performans Ipuclari
 
-1. **Use JPEG**: Writes faster compared to PNG
-2. **Use SSD**: Prefer SSD since frame write speed matters
-3. **Choose appropriate intervals**: Do not extract all frames; select only what is needed
-4. **Reduce size**: Use the resize feature to reduce disk space and processing time
+1. **JPEG kullanin**: PNG'ye gore daha hizli yazilir
+2. **SSD kullanin**: Frame yazma hizi onemli oldugundan SSD tercih edin
+3. **Uygun aralik secin**: Tum frame'leri cikarmayin, gerekli olani secin
+4. **Boyut kucultun**: Resize ozelligi ile disk alani ve islem suresi azaltilabilir
 
-## License
+## Lisans
 
-This project is licensed under the MIT License.
+Bu proje MIT lisansi altinda lisanslanmistir.
 
-## Useful Resources
+## Faydali Kaynaklar
 
 - [GStreamer Documentation](https://gstreamer.freedesktop.org/documentation/)
 - [GStreamer AppSink Plugin](https://gstreamer.freedesktop.org/documentation/app/appsink.html)

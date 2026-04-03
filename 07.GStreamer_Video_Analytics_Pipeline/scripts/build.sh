@@ -2,81 +2,81 @@
 
 # GStreamer Video Analytics Pipeline Build Script
 
-# Renkleri tanımla
+# Define colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Proje kök dizini
+# Project root directory
 PROJECT_ROOT=$(dirname $(dirname $(readlink -f $0)))
 BUILD_DIR="$PROJECT_ROOT/build"
 
 echo -e "${GREEN}=== GStreamer Video Analytics Pipeline Build Script ===${NC}"
-echo "Proje dizini: $PROJECT_ROOT"
-echo "Build dizini: $BUILD_DIR"
+echo "Project directory: $PROJECT_ROOT"
+echo "Build directory: $BUILD_DIR"
 echo ""
 
-# Build tipini al (varsayılan: Release)
+# Get build type (default: Release)
 BUILD_TYPE=${1:-Release}
-echo -e "${YELLOW}Build tipi: $BUILD_TYPE${NC}"
+echo -e "${YELLOW}Build type: $BUILD_TYPE${NC}"
 
-# Build dizinini oluştur
+# Create build directory
 if [ ! -d "$BUILD_DIR" ]; then
-    echo "Build dizini oluşturuluyor..."
+    echo "Creating build directory..."
     mkdir -p "$BUILD_DIR"
 fi
 
-# Gerekli dizinleri oluştur
+# Create required directories
 mkdir -p "$PROJECT_ROOT/logs"
 mkdir -p "$PROJECT_ROOT/recordings"
 mkdir -p "$PROJECT_ROOT/assets"
 
 cd "$BUILD_DIR"
 
-# CMake yapılandırması
-echo -e "\n${YELLOW}CMake yapılandırması başlatılıyor...${NC}"
+# CMake configuration
+echo -e "\n${YELLOW}Starting CMake configuration...${NC}"
 cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}CMake yapılandırması başarısız!${NC}"
+    echo -e "${RED}CMake configuration failed!${NC}"
     exit 1
 fi
 
-# CPU çekirdek sayısını al
+# Get CPU core count
 CORES=$(nproc)
-echo -e "\n${YELLOW}Derleme başlatılıyor ($CORES çekirdek kullanılacak)...${NC}"
+echo -e "\n${YELLOW}Starting compilation ($CORES cores will be used)...${NC}"
 
-# Derleme
+# Compile
 make -j$CORES
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Derleme başarısız!${NC}"
+    echo -e "${RED}Compilation failed!${NC}"
     exit 1
 fi
 
-echo -e "\n${GREEN}Derleme başarıyla tamamlandı!${NC}"
+echo -e "\n${GREEN}Compilation completed successfully!${NC}"
 
-# Test video dosyası oluştur (yoksa)
+# Create test video file (if not exists)
 if [ ! -f "$PROJECT_ROOT/assets/test_video.mp4" ]; then
-    echo -e "\n${YELLOW}Test video dosyası oluşturuluyor...${NC}"
+    echo -e "\n${YELLOW}Creating test video file...${NC}"
     gst-launch-1.0 videotestsrc num-buffers=300 ! \
         video/x-raw,width=1280,height=720,framerate=30/1 ! \
         x264enc ! mp4mux ! \
         filesink location="$PROJECT_ROOT/assets/test_video.mp4"
 fi
 
-# Çalıştırma bilgisi
-echo -e "\n${GREEN}=== Derleme Tamamlandı ===${NC}"
-echo "Çalıştırılabilir dosya: $BUILD_DIR/gstreamer_video_analytics"
+# Run information
+echo -e "\n${GREEN}=== Build Complete ===${NC}"
+echo "Executable: $BUILD_DIR/gstreamer_video_analytics"
 echo ""
-echo "Örnek kullanımlar:"
-echo "  # Test videosu ile çalıştır"
+echo "Example usage:"
+echo "  # Run with test video"
 echo "  $BUILD_DIR/gstreamer_video_analytics -i assets/test_video.mp4"
 echo ""
-echo "  # Web kamerası ile hareket algılama"
+echo "  # Webcam with motion detection"
 echo "  $BUILD_DIR/gstreamer_video_analytics -i webcam --motion-detect"
 echo ""
-echo "  # RTSP yayını başlat"
+echo "  # Start RTSP stream"
 echo "  $BUILD_DIR/gstreamer_video_analytics -i webcam -o rtsp://0.0.0.0:8554/live"
 echo ""

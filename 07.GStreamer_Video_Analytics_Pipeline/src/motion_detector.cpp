@@ -1,6 +1,6 @@
 /**
  * @file motion_detector.cpp
- * @brief Hareket algılama sınıfı implementasyonu
+ * @brief Motion detection class implementation
  */
 
 #include "motion_detector.h"
@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-// GStreamer base transform için sanal tablo
+// Virtual table for GStreamer base transform
 typedef struct {
     GstBaseTransformClass parent_class;
 } MotionDetectorClass;
@@ -18,7 +18,7 @@ typedef struct {
     MotionDetector* detector;
 } MotionDetectorElement;
 
-// GObject tip tanımlamaları
+// GObject type definitions
 #define MOTION_DETECTOR_TYPE (motion_detector_get_type())
 #define MOTION_DETECTOR(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), MOTION_DETECTOR_TYPE, MotionDetectorElement))
 
@@ -29,7 +29,7 @@ static GstFlowReturn motion_detector_transform(GstBaseTransform* trans, GstBuffe
 static gboolean motion_detector_set_caps(GstBaseTransform* trans, GstCaps* incaps, GstCaps* outcaps);
 
 /**
- * @brief GObject sınıf başlatma
+ * @brief GObject class initialization
  */
 static void motion_detector_class_init(MotionDetectorClass* klass) {
     GstBaseTransformClass* base_transform_class = GST_BASE_TRANSFORM_CLASS(klass);
@@ -37,12 +37,12 @@ static void motion_detector_class_init(MotionDetectorClass* klass) {
     base_transform_class->transform = GST_DEBUG_FUNCPTR(motion_detector_transform);
     base_transform_class->set_caps = GST_DEBUG_FUNCPTR(motion_detector_set_caps);
     
-    // In-place transform kullan
+    // Use in-place transform
     base_transform_class->transform_ip_on_passthrough = FALSE;
 }
 
 /**
- * @brief GObject örnek başlatma
+ * @brief GObject instance initialization
  */
 static void motion_detector_init(MotionDetectorElement* element) {
     gst_base_transform_set_in_place(GST_BASE_TRANSFORM(element), TRUE);
@@ -52,14 +52,14 @@ static void motion_detector_init(MotionDetectorElement* element) {
  * @brief Constructor
  */
 MotionDetector::MotionDetector() {
-    // İstatistikleri sıfırla
+    // Reset statistics
     resetStats();
-    
-    // Son alarm zamanını başlat
+
+    // Initialize last alert time
     last_alert_time_ = std::chrono::steady_clock::now();
     
 #ifdef HAVE_OPENCV
-    // Arka plan çıkarıcı oluştur
+    // Create background subtractor
     if (params_.algorithm == MotionAlgorithm::MOG2) {
         bg_subtractor_ = cv::createBackgroundSubtractorMOG2(
             params_.history_length, 
@@ -74,7 +74,7 @@ MotionDetector::MotionDetector() {
         );
     }
     
-    std::cout << "[MotionDetector] OpenCV hareket algılama etkin." << std::endl;
+    std::cout << "[MotionDetector] OpenCV motion detection enabled." << std::endl;
 #endif
 }
 
@@ -88,7 +88,7 @@ MotionDetector::~MotionDetector() {
 }
 
 /**
- * @brief GStreamer elementi oluşturur
+ * @brief Creates a GStreamer element
  */
 GstElement* MotionDetector::createElement() {
     element_ = g_object_new(MOTION_DETECTOR_TYPE, nullptr);
@@ -98,14 +98,14 @@ GstElement* MotionDetector::createElement() {
 }
 
 /**
- * @brief Algılama parametrelerini ayarlar
+ * @brief Sets detection parameters
  */
 void MotionDetector::setParameters(const MotionDetectionParams& params) {
     std::lock_guard<std::mutex> lock(params_mutex_);
     params_ = params;
     
 #ifdef HAVE_OPENCV
-    // Algoritma değiştiyse yeni arka plan çıkarıcı oluştur
+    // Create a new background subtractor if algorithm changed
     if (params_.algorithm == MotionAlgorithm::MOG2) {
         bg_subtractor_ = cv::createBackgroundSubtractorMOG2(
             params_.history_length, 
@@ -123,7 +123,7 @@ void MotionDetector::setParameters(const MotionDetectionParams& params) {
 }
 
 /**
- * @brief Mevcut parametreleri döndürür
+ * @brief Returns current parameters
  */
 MotionDetectionParams MotionDetector::getParameters() const {
     std::lock_guard<std::mutex> lock(params_mutex_);
@@ -131,14 +131,14 @@ MotionDetectionParams MotionDetector::getParameters() const {
 }
 
 /**
- * @brief Hareket algılama algoritmasını değiştirir
+ * @brief Changes the motion detection algorithm
  */
 void MotionDetector::setAlgorithm(MotionAlgorithm algorithm) {
     std::lock_guard<std::mutex> lock(params_mutex_);
     params_.algorithm = algorithm;
     
 #ifdef HAVE_OPENCV
-    // Yeni algoritma için arka plan modelini sıfırla
+    // Reset background model for new algorithm
     previous_frame_ = cv::Mat();
     background_model_ = cv::Mat();
     
@@ -151,26 +151,26 @@ void MotionDetector::setAlgorithm(MotionAlgorithm algorithm) {
 }
 
 /**
- * @brief Hassasiyet seviyesini ayarlar
+ * @brief Sets sensitivity level
  */
 void MotionDetector::setSensitivity(double sensitivity) {
     std::lock_guard<std::mutex> lock(params_mutex_);
     params_.sensitivity = std::clamp(sensitivity, 0.0, 1.0);
     
-    // Hassasiyete göre eşik değerlerini ayarla
+    // Adjust threshold values based on sensitivity
     params_.threshold = 25.0 * (1.0 - params_.sensitivity) + 5.0;
     params_.min_area = (int)(1000 * (1.0 - params_.sensitivity) + 100);
 }
 
 /**
- * @brief Hareket olay callback'i ayarlar
+ * @brief Sets the motion event callback
  */
 void MotionDetector::setMotionEventCallback(MotionEventCallback callback) {
     motion_callback_ = callback;
 }
 
 /**
- * @brief İstatistikleri döndürür
+ * @brief Returns statistics
  */
 MotionStats MotionDetector::getStats() const {
     std::lock_guard<std::mutex> lock(stats_mutex_);
@@ -178,7 +178,7 @@ MotionStats MotionDetector::getStats() const {
 }
 
 /**
- * @brief İstatistikleri sıfırlar
+ * @brief Resets statistics
  */
 void MotionDetector::resetStats() {
     std::lock_guard<std::mutex> lock(stats_mutex_);
@@ -187,7 +187,7 @@ void MotionDetector::resetStats() {
 }
 
 /**
- * @brief Mevcut hareket bölgelerini döndürür
+ * @brief Returns current motion regions
  */
 std::vector<MotionRegion> MotionDetector::getCurrentMotions() const {
     std::lock_guard<std::mutex> lock(motions_mutex_);
@@ -195,14 +195,14 @@ std::vector<MotionRegion> MotionDetector::getCurrentMotions() const {
 }
 
 /**
- * @brief Hareket algılamayı etkinleştirir/devre dışı bırakır
+ * @brief Enables/disables motion detection
  */
 void MotionDetector::setEnabled(bool enable) {
     enabled_ = enable;
 }
 
 /**
- * @brief İlgi alanı ayarlar
+ * @brief Sets the region of interest
  */
 void MotionDetector::setROI(int x, int y, int width, int height) {
     roi_ = cv::Rect(x, y, width, height);
@@ -210,21 +210,21 @@ void MotionDetector::setROI(int x, int y, int width, int height) {
 }
 
 /**
- * @brief İlgi alanını temizler
+ * @brief Clears the region of interest
  */
 void MotionDetector::clearROI() {
     has_roi_ = false;
 }
 
 /**
- * @brief Hariç tutulacak bölge ekler
+ * @brief Adds an exclusion zone
  */
 void MotionDetector::addExclusionZone(int x, int y, int width, int height) {
     exclusion_zones_.push_back(cv::Rect(x, y, width, height));
 }
 
 /**
- * @brief Tüm hariç tutma bölgelerini temizler
+ * @brief Clears all exclusion zones
  */
 void MotionDetector::clearExclusionZones() {
     exclusion_zones_.clear();
@@ -232,14 +232,14 @@ void MotionDetector::clearExclusionZones() {
 
 #ifdef HAVE_OPENCV
 /**
- * @brief Hareket maskesini döndürür
+ * @brief Returns the motion mask
  */
 cv::Mat MotionDetector::getMotionMask() const {
     return motion_mask_.clone();
 }
 
 /**
- * @brief Arka plan modelini döndürür
+ * @brief Returns the background model
  */
 cv::Mat MotionDetector::getBackgroundModel() const {
     if (bg_subtractor_) {
@@ -252,21 +252,21 @@ cv::Mat MotionDetector::getBackgroundModel() const {
 #endif
 
 /**
- * @brief Video karesini işler
+ * @brief Processes a video frame
  */
 GstBuffer* MotionDetector::processFrame(GstBuffer* buffer, const GstVideoInfo* info) {
     if (!enabled_) {
         return buffer;
     }
     
-    // İstatistikleri güncelle
+    // Update statistics
     {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         stats_.total_frames++;
     }
-    
+
 #ifdef HAVE_OPENCV
-    // Buffer'ı OpenCV Mat'e dönüştür
+    // Convert buffer to OpenCV Mat
     GstMapInfo map;
     if (!gst_buffer_map(buffer, &map, GST_MAP_READWRITE)) {
         return buffer;
@@ -277,7 +277,7 @@ GstBuffer* MotionDetector::processFrame(GstBuffer* buffer, const GstVideoInfo* i
     
     cv::Mat frame;
     
-    // Video formatına göre dönüştür
+    // Convert based on video format
     switch (GST_VIDEO_INFO_FORMAT(info)) {
         case GST_VIDEO_FORMAT_I420:
             {
@@ -300,29 +300,29 @@ GstBuffer* MotionDetector::processFrame(GstBuffer* buffer, const GstVideoInfo* i
             return buffer;
     }
     
-    // Hareket algıla
+    // Detect motion
     std::vector<MotionRegion> regions = detectMotion(frame);
     
-    // Hareket bölgelerini sakla
+    // Store motion regions
     {
         std::lock_guard<std::mutex> lock(motions_mutex_);
         current_motions_ = regions;
     }
     
-    // Hareket geçmişini güncelle
+    // Update motion history
     motion_history_.push_back(regions);
     if (motion_history_.size() > max_history_size_) {
         motion_history_.pop_front();
     }
     
-    // İstatistikleri güncelle
+    // Update statistics
     if (!regions.empty()) {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         stats_.motion_frames++;
         stats_.last_motion_time = std::chrono::steady_clock::now();
         stats_.total_regions += regions.size();
         
-        // Hareket alanını hesapla
+        // Calculate motion area
         double total_area = 0;
         for (const auto& region : regions) {
             total_area += region.width * region.height;
@@ -335,22 +335,22 @@ GstBuffer* MotionDetector::processFrame(GstBuffer* buffer, const GstVideoInfo* i
         
         stats_.max_motion_area = std::max(stats_.max_motion_area, motion_percentage);
         
-        // Hareket olayını tetikle
+        // Trigger motion event
         if (motion_percentage > params_.alert_threshold) {
             triggerMotionEvent(regions, GST_BUFFER_PTS(buffer));
         }
     }
     
-    // Görselleştirme
+    // Visualization
     if (params_.draw_motion_regions || params_.show_debug_view) {
         drawMotionRegions(frame, regions);
         
-        // Debug görünümü
+        // Debug view
         if (params_.show_debug_view && !motion_mask_.empty()) {
             cv::Mat debug_view;
             cv::cvtColor(motion_mask_, debug_view, cv::COLOR_GRAY2BGR);
             
-            // Ekranı böl: sol taraf orijinal, sağ taraf hareket maskesi
+            // Split screen: left side original, right side motion mask
             cv::Mat combined(height, width * 2, CV_8UC3);
             frame.copyTo(combined(cv::Rect(0, 0, width, height)));
             debug_view.copyTo(combined(cv::Rect(width, 0, width, height)));
@@ -358,7 +358,7 @@ GstBuffer* MotionDetector::processFrame(GstBuffer* buffer, const GstVideoInfo* i
         }
     }
     
-    // Frame'i buffer'a geri yaz
+    // Write frame back to buffer
     switch (GST_VIDEO_INFO_FORMAT(info)) {
         case GST_VIDEO_FORMAT_I420:
             {
@@ -392,12 +392,12 @@ GstBuffer* MotionDetector::processFrame(GstBuffer* buffer, const GstVideoInfo* i
 
 #ifdef HAVE_OPENCV
 /**
- * @brief OpenCV ile hareket algıla
+ * @brief Detect motion with OpenCV
  */
 std::vector<MotionRegion> MotionDetector::detectMotion(const cv::Mat& frame) {
     cv::Mat mask;
     
-    // Algoritma seçimi
+    // Algorithm selection
     switch (params_.algorithm) {
         case MotionAlgorithm::FRAME_DIFF:
             mask = frameDifference(frame);
@@ -410,7 +410,7 @@ std::vector<MotionRegion> MotionDetector::detectMotion(const cv::Mat& frame) {
             break;
             
         case MotionAlgorithm::OPTICAL_FLOW:
-            // TODO: Optik akış implementasyonu
+            // TODO: Optical flow implementation
             mask = cv::Mat::zeros(frame.size(), CV_8UC1);
             break;
             
@@ -419,74 +419,74 @@ std::vector<MotionRegion> MotionDetector::detectMotion(const cv::Mat& frame) {
             break;
     }
     
-    // ROI varsa uygula
+    // Apply ROI if set
     if (has_roi_) {
         cv::Mat roi_mask = cv::Mat::zeros(mask.size(), CV_8UC1);
         roi_mask(roi_) = 255;
         cv::bitwise_and(mask, roi_mask, mask);
     }
     
-    // Hariç tutma bölgelerini uygula
+    // Apply exclusion zones
     for (const auto& zone : exclusion_zones_) {
         mask(zone) = 0;
     }
     
-    // Morfolojik işlemler
+    // Morphological operations
     applyMorphology(mask);
     
-    // Hareket maskesini sakla
+    // Store motion mask
     motion_mask_ = mask.clone();
     
-    // Hareket bölgelerini bul
+    // Find motion regions
     std::vector<MotionRegion> regions = findMotionRegions(mask);
     
-    // Bölgeleri filtrele
+    // Filter regions
     return filterRegions(regions);
 }
 
 /**
- * @brief Kare farkı algoritması
+ * @brief Frame difference algorithm
  */
 cv::Mat MotionDetector::frameDifference(const cv::Mat& frame) {
     cv::Mat gray, diff, mask;
     
-    // Gri tonlamaya çevir
+    // Convert to grayscale
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
     
-    // İlk kare ise sakla
+    // Store if first frame
     if (previous_frame_.empty()) {
         previous_frame_ = gray.clone();
         return cv::Mat::zeros(frame.size(), CV_8UC1);
     }
     
-    // Kare farkını hesapla
+    // Calculate frame difference
     cv::absdiff(previous_frame_, gray, diff);
     
-    // Eşikleme
+    // Thresholding
     cv::threshold(diff, mask, params_.threshold, 255, cv::THRESH_BINARY);
     
-    // Önceki kareyi güncelle
+    // Update previous frame
     previous_frame_ = gray.clone();
     
     return mask;
 }
 
 /**
- * @brief Arka plan çıkarma algoritması
+ * @brief Background subtraction algorithm
  */
 cv::Mat MotionDetector::backgroundSubtraction(const cv::Mat& frame) {
     cv::Mat mask;
     
     if (bg_subtractor_) {
-        // OpenCV arka plan çıkarıcı kullan
+        // Use OpenCV background subtractor
         bg_subtractor_->apply(frame, mask, params_.learning_rate);
         
-        // Gölgeleri kaldır (eğer etkinse)
+        // Remove shadows (if enabled)
         if (params_.detect_shadows) {
             cv::threshold(mask, mask, 128, 255, cv::THRESH_BINARY);
         }
     } else {
-        // Basit arka plan modeli
+        // Simple background model
         if (background_model_.empty()) {
             background_model_ = frame.clone();
             return cv::Mat::zeros(frame.size(), CV_8UC1);
@@ -497,7 +497,7 @@ cv::Mat MotionDetector::backgroundSubtraction(const cv::Mat& frame) {
         cv::cvtColor(diff, diff, cv::COLOR_BGR2GRAY);
         cv::threshold(diff, mask, params_.threshold, 255, cv::THRESH_BINARY);
         
-        // Arka plan modelini güncelle
+        // Update background model
         cv::addWeighted(frame, params_.learning_rate, background_model_, 
                        1.0 - params_.learning_rate, 0, background_model_);
     }
@@ -506,10 +506,10 @@ cv::Mat MotionDetector::backgroundSubtraction(const cv::Mat& frame) {
 }
 
 /**
- * @brief Morfolojik işlemler uygula
+ * @brief Apply morphological operations
  */
 void MotionDetector::applyMorphology(cv::Mat& mask) {
-    // Erozyon (küçük gürültüleri kaldır)
+    // Erosion (remove small noise)
     if (params_.erosion_size > 0) {
         cv::Mat erosion_kernel = cv::getStructuringElement(
             cv::MORPH_ELLIPSE,
@@ -518,7 +518,7 @@ void MotionDetector::applyMorphology(cv::Mat& mask) {
         cv::erode(mask, mask, erosion_kernel);
     }
     
-    // Dilatasyon (boşlukları doldur)
+    // Dilation (fill gaps)
     if (params_.dilation_size > 0) {
         cv::Mat dilation_kernel = cv::getStructuringElement(
             cv::MORPH_ELLIPSE,
@@ -527,25 +527,25 @@ void MotionDetector::applyMorphology(cv::Mat& mask) {
         cv::dilate(mask, mask, dilation_kernel);
     }
     
-    // Açma işlemi (opening) - küçük nesneleri kaldır
+    // Opening operation - remove small objects
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
     cv::morphologyEx(mask, mask, cv::MORPH_OPEN, kernel);
     
-    // Kapama işlemi (closing) - küçük delikleri kapat
+    // Closing operation - fill small holes
     cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, kernel);
 }
 
 /**
- * @brief Hareket bölgelerini bul
+ * @brief Find motion regions
  */
 std::vector<MotionRegion> MotionDetector::findMotionRegions(const cv::Mat& mask) {
     std::vector<MotionRegion> regions;
     std::vector<std::vector<cv::Point>> contours;
     
-    // Konturları bul
+    // Find contours
     cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
     
-    // Her kontur için bölge oluştur
+    // Create a region for each contour
     for (const auto& contour : contours) {
         cv::Rect bbox = cv::boundingRect(contour);
         double area = cv::contourArea(contour);
@@ -556,7 +556,7 @@ std::vector<MotionRegion> MotionDetector::findMotionRegions(const cv::Mat& mask)
         region.width = bbox.width;
         region.height = bbox.height;
         region.intensity = std::min(1.0, area / (params_.max_area / 2.0));
-        region.timestamp = 0; // Frame timestamp'i daha sonra eklenecek
+        region.timestamp = 0; // Frame timestamp will be added later
         
         regions.push_back(region);
     }
@@ -565,19 +565,19 @@ std::vector<MotionRegion> MotionDetector::findMotionRegions(const cv::Mat& mask)
 }
 
 /**
- * @brief Hareket bölgelerini filtrele
+ * @brief Filter motion regions
  */
 std::vector<MotionRegion> MotionDetector::filterRegions(const std::vector<MotionRegion>& regions) {
     std::vector<MotionRegion> filtered;
     
     for (const auto& region : regions) {
-        // Alan filtresi
+        // Area filter
         double area = region.width * region.height;
         if (area < params_.min_area || area > params_.max_area) {
             continue;
         }
         
-        // En/boy oranı filtresi
+        // Aspect ratio filter
         double aspect_ratio = (double)region.width / region.height;
         if (aspect_ratio < params_.min_aspect_ratio || 
             aspect_ratio > params_.max_aspect_ratio) {
@@ -587,9 +587,9 @@ std::vector<MotionRegion> MotionDetector::filterRegions(const std::vector<Motion
         filtered.push_back(region);
     }
     
-    // Takip etme sınırı
+    // Tracking limit
     if (params_.enable_tracking && filtered.size() > params_.max_tracked_objects) {
-        // En büyük bölgeleri tut
+        // Keep the largest regions
         std::sort(filtered.begin(), filtered.end(), 
                   [](const MotionRegion& a, const MotionRegion& b) {
                       return (a.width * a.height) > (b.width * b.height);
@@ -601,26 +601,26 @@ std::vector<MotionRegion> MotionDetector::filterRegions(const std::vector<Motion
 }
 
 /**
- * @brief Hareket bölgelerini çiz
+ * @brief Draw motion regions
  */
 void MotionDetector::drawMotionRegions(cv::Mat& frame, const std::vector<MotionRegion>& regions) {
     for (const auto& region : regions) {
-        // Yoğunluğa göre renk belirle
+        // Determine color based on intensity
         cv::Scalar color;
         if (region.intensity > 0.7) {
-            color = cv::Scalar(0, 0, 255); // Kırmızı - yüksek hareket
+            color = cv::Scalar(0, 0, 255); // Red - high motion
         } else if (region.intensity > 0.4) {
-            color = cv::Scalar(0, 165, 255); // Turuncu - orta hareket
+            color = cv::Scalar(0, 165, 255); // Orange - medium motion
         } else {
-            color = cv::Scalar(0, 255, 0); // Yeşil - düşük hareket
+            color = cv::Scalar(0, 255, 0); // Green - low motion
         }
         
-        // Dikdörtgen çiz
+        // Draw rectangle
         cv::rectangle(frame, 
                      cv::Rect(region.x, region.y, region.width, region.height),
                      color, 2);
         
-        // Bilgi metni
+        // Info text
         std::string info = "Motion: " + 
                           std::to_string(static_cast<int>(region.intensity * 100)) + "%";
         cv::putText(frame, info, 
@@ -628,7 +628,7 @@ void MotionDetector::drawMotionRegions(cv::Mat& frame, const std::vector<MotionR
                    cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1);
     }
     
-    // Genel bilgiler
+    // General information
     if (!regions.empty()) {
         std::string status = "MOTION DETECTED - " + std::to_string(regions.size()) + " regions";
         cv::putText(frame, status,
@@ -651,7 +651,7 @@ static GstFlowReturn motion_detector_transform(GstBaseTransform* trans,
         return GST_FLOW_ERROR;
     }
     
-    // Video bilgisini al
+    // Get video info
     GstVideoInfo info;
     GstCaps* caps = gst_pad_get_current_caps(GST_BASE_TRANSFORM_SINK_PAD(trans));
     if (!gst_video_info_from_caps(&info, caps)) {
@@ -660,7 +660,7 @@ static GstFlowReturn motion_detector_transform(GstBaseTransform* trans,
     }
     gst_caps_unref(caps);
     
-    // Kareyi işle (in-place)
+    // Process frame (in-place)
     detector->processFrame(inbuf, &info);
     
     return GST_FLOW_OK;
@@ -676,7 +676,7 @@ static gboolean motion_detector_set_caps(GstBaseTransform* trans,
 }
 
 /**
- * @brief Hareket olayını tetikle
+ * @brief Trigger motion event
  */
 void MotionDetector::triggerMotionEvent(const std::vector<MotionRegion>& regions, 
                                        guint64 timestamp) {
@@ -684,7 +684,7 @@ void MotionDetector::triggerMotionEvent(const std::vector<MotionRegion>& regions
         return;
     }
     
-    // Cooldown kontrolü
+    // Cooldown check
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         now - last_alert_time_).count();
@@ -693,13 +693,13 @@ void MotionDetector::triggerMotionEvent(const std::vector<MotionRegion>& regions
         return;
     }
     
-    // Toplam hareket alanını hesapla
+    // Calculate total motion area
     double total_area = 0;
     for (const auto& region : regions) {
         total_area += region.width * region.height;
     }
     
-    // Yüzde olarak hesapla (frame boyutuna göre)
+    // Calculate as percentage (relative to frame size)
     double motion_percentage = 0;
     if (element_) {
         GstCaps* caps = gst_pad_get_current_caps(
@@ -714,9 +714,9 @@ void MotionDetector::triggerMotionEvent(const std::vector<MotionRegion>& regions
         }
     }
     
-    // Callback'i çağır
+    // Call the callback
     motion_callback_(regions, timestamp, motion_percentage);
     
-    // Son alarm zamanını güncelle
+    // Update last alert time
     last_alert_time_ = now;
 }

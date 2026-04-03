@@ -5,37 +5,37 @@
 #include <thread>
 #include <chrono>
 
-// Ana menüyü göster
+// Show main menu
 void showMenu() {
     std::cout << "\n--- GStreamer C++ Media Player ---\n";
-    std::cout << "1. Dosya Aç\n";
-    std::cout << "2. Oynat\n";
-    std::cout << "3. Duraklat\n";
-    std::cout << "4. Durdur\n";
-    std::cout << "5. 10 saniye ileri\n";
-    std::cout << "6. 10 saniye geri\n";
-    std::cout << "7. Belirli bir konuma atla\n";
-    std::cout << "8. Medya bilgilerini göster\n";
-    std::cout << "9. Konum bilgisini güncelle\n";
-    std::cout << "0. Çıkış\n";
-    std::cout << "Seçiminiz: ";
+    std::cout << "1. Open File\n";
+    std::cout << "2. Play\n";
+    std::cout << "3. Pause\n";
+    std::cout << "4. Stop\n";
+    std::cout << "5. Skip 10 seconds forward\n";
+    std::cout << "6. Skip 10 seconds backward\n";
+    std::cout << "7. Seek to a specific position\n";
+    std::cout << "8. Show media information\n";
+    std::cout << "9. Toggle position update\n";
+    std::cout << "0. Exit\n";
+    std::cout << "Your choice: ";
 }
 
-// Bir thread için konum güncelleme fonksiyonu
+// Position update function for a thread
 void positionUpdateThread(MediaPlayer& player, bool& running) {
     while (running) {
         if (player.isPlaying()) {
             gint64 position = player.getPosition();
             gint64 duration = player.getDuration();
-            
+
             if (position >= 0 && duration > 0) {
-                std::cout << "\rKonum: " << Utils::formatTime(position) 
-                          << " / " << Utils::formatTime(duration) 
+                std::cout << "\rPosition: " << Utils::formatTime(position)
+                          << " / " << Utils::formatTime(duration)
                           << " (%)" << (position * 100 / duration) << ")" << std::flush;
             }
         }
-        
-        // 500ms bekle
+
+        // Wait 500ms
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
@@ -46,135 +46,135 @@ int main(int argc, char *argv[]) {
     bool positionUpdateEnabled = false;
     std::thread updateThread;
     
-    std::cout << "GStreamer C++ Media Player'a Hoş Geldiniz!\n";
-    
-    // Komut satırı parametresinden dosya yükle
+    std::cout << "Welcome to GStreamer C++ Media Player!\n";
+
+    // Load file from command line argument
     if (argc > 1) {
         std::string filePath = argv[1];
-        std::cout << "Dosya açılıyor: " << filePath << std::endl;
-        
+        std::cout << "Opening file: " << filePath << std::endl;
+
         if (player.openFile(filePath)) {
-            std::cout << "Dosya başarıyla açıldı.\n";
+            std::cout << "File opened successfully.\n";
             std::cout << player.getMediaInfo() << std::endl;
-            
-            if (Utils::getYesNoInput("Şimdi oynatılsın mı?")) {
+
+            if (Utils::getYesNoInput("Play now?")) {
                 player.play();
-                
-                // Konum güncelleme thread'ini başlat
+
+                // Start position update thread
                 positionUpdateEnabled = true;
                 updateThread = std::thread(positionUpdateThread, std::ref(player), std::ref(running));
             }
         } else {
-            std::cerr << "Dosya açılamadı!\n";
+            std::cerr << "Failed to open file!\n";
         }
     }
     
-    // Ana döngü
+    // Main loop
     int choice = -1;
     while (choice != 0) {
         showMenu();
         std::cin >> choice;
-        
+
         switch (choice) {
-            case 1: {  // Dosya Aç
-                std::string filePath = Utils::getInput("Dosya yolunu girin");
-                
+            case 1: {  // Open File
+                std::string filePath = Utils::getInput("Enter file path");
+
                 if (player.openFile(filePath)) {
-                    std::cout << "Dosya başarıyla açıldı.\n";
+                    std::cout << "File opened successfully.\n";
                     std::cout << player.getMediaInfo() << std::endl;
                 } else {
-                    std::cerr << "Dosya açılamadı!\n";
+                    std::cerr << "Failed to open file!\n";
                 }
                 break;
             }
-            case 2:  // Oynat
+            case 2:  // Play
                 if (player.play()) {
-                    std::cout << "Oynatılıyor...\n";
-                    
-                    if (!positionUpdateEnabled && Utils::getYesNoInput("Konum güncellemesi başlatılsın mı?")) {
+                    std::cout << "Playing...\n";
+
+                    if (!positionUpdateEnabled && Utils::getYesNoInput("Start position update?")) {
                         positionUpdateEnabled = true;
-                        
+
                         if (updateThread.joinable()) {
                             updateThread.join();
                         }
-                        
+
                         updateThread = std::thread(positionUpdateThread, std::ref(player), std::ref(running));
                     }
                 } else {
-                    std::cerr << "Oynatılamadı!\n";
+                    std::cerr << "Failed to play!\n";
                 }
                 break;
-            case 3:  // Duraklat
+            case 3:  // Pause
                 if (player.pause()) {
-                    std::cout << "Duraklatıldı.\n";
+                    std::cout << "Paused.\n";
                 } else {
-                    std::cerr << "Duraklatılamadı!\n";
+                    std::cerr << "Failed to pause!\n";
                 }
                 break;
-            case 4:  // Durdur
+            case 4:  // Stop
                 if (player.stop()) {
-                    std::cout << "Durduruldu.\n";
+                    std::cout << "Stopped.\n";
                 } else {
-                    std::cerr << "Durdurulamadı!\n";
+                    std::cerr << "Failed to stop!\n";
                 }
                 break;
-            case 5:  // 10 saniye ileri
+            case 5:  // Skip 10 seconds forward
                 if (player.seekRelative(10 * GST_SECOND)) {
-                    std::cout << "10 saniye ileri atlandı.\n";
+                    std::cout << "Skipped 10 seconds forward.\n";
                 } else {
-                    std::cerr << "İleri atlanamadı!\n";
+                    std::cerr << "Failed to skip forward!\n";
                 }
                 break;
-            case 6:  // 10 saniye geri
+            case 6:  // Skip 10 seconds backward
                 if (player.seekRelative(-10 * GST_SECOND)) {
-                    std::cout << "10 saniye geri atlandı.\n";
+                    std::cout << "Skipped 10 seconds backward.\n";
                 } else {
-                    std::cerr << "Geri atlanamadı!\n";
+                    std::cerr << "Failed to skip backward!\n";
                 }
                 break;
-            case 7: {  // Belirli bir konuma atla
-                std::string posStr = Utils::getInput("Atlanacak konumu saniye olarak girin");
+            case 7: {  // Seek to a specific position
+                std::string posStr = Utils::getInput("Enter position in seconds to seek to");
                 try {
                     int seconds = std::stoi(posStr);
                     if (player.seek(seconds * GST_SECOND)) {
-                        std::cout << seconds << " saniyeye atlandı.\n";
+                        std::cout << "Seeked to " << seconds << " seconds.\n";
                     } else {
-                        std::cerr << "Atlanamadı!\n";
+                        std::cerr << "Failed to seek!\n";
                     }
                 } catch (const std::exception& e) {
-                    std::cerr << "Geçersiz değer girdiniz!\n";
+                    std::cerr << "Invalid value entered!\n";
                 }
                 break;
             }
-            case 8:  // Medya bilgilerini göster
-                std::cout << "Medya Bilgileri:\n";
+            case 8:  // Show media information
+                std::cout << "Media Information:\n";
                 std::cout << player.getMediaInfo() << std::endl;
                 break;
-            case 9:  // Konum bilgisini güncelle
+            case 9:  // Toggle position update
                 positionUpdateEnabled = !positionUpdateEnabled;
-                
+
                 if (positionUpdateEnabled) {
-                    std::cout << "Konum güncellemesi etkinleştirildi.\n";
-                    
+                    std::cout << "Position update enabled.\n";
+
                     if (updateThread.joinable()) {
                         updateThread.join();
                     }
-                    
+
                     updateThread = std::thread(positionUpdateThread, std::ref(player), std::ref(running));
                 } else {
-                    std::cout << "Konum güncellemesi devre dışı bırakıldı.\n";
+                    std::cout << "Position update disabled.\n";
                 }
                 break;
-            case 0:  // Çıkış
-                std::cout << "Program sonlandırılıyor...\n";
+            case 0:  // Exit
+                std::cout << "Exiting program...\n";
                 break;
             default:
-                std::cerr << "Geçersiz seçim!\n";
+                std::cerr << "Invalid choice!\n";
                 break;
         }
     }
-    
-    // Thread'i temizle
+
+    // Clean up thread
     running = false;
     if (updateThread.joinable()) {
         updateThread.join();

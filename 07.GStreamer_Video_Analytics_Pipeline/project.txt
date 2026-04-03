@@ -20,4 +20,4 @@ GStreamerVideoAnalytics/
 ├── assets/
 │   └── test_video.mp4
 └── build/
-    └── (derlenmiş dosyalar)
+    └── (compiled files)

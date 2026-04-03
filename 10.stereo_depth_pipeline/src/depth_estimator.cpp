@@ -8,12 +8,12 @@ DepthEstimator::DepthEstimator()
     initMatchers();
 }
 
-// ─── Matcher başlatma ────────────────────────────────────────────────────────
+// ─── Matcher initialization ──────────────────────────────────────────────────
 void DepthEstimator::initMatchers()
 {
     // ── StereoBM ──────────────────────────────────────────────────────────────
-    // numDisparities: 16'nın katı olmalı (ne kadar büyük → daha geniş derinlik aralığı)
-    // blockSize: tek sayı, 5–51 arası (büyük → pürüzsüz ama kenarlar kayar)
+    // numDisparities: must be a multiple of 16 (larger → wider depth range)
+    // blockSize: odd number, 5–51 range (larger → smoother but edges shift)
     bm_ = cv::StereoBM::create(/*numDisparities=*/64, /*blockSize=*/15);
     bm_->setPreFilterCap(31);
     bm_->setMinDisparity(0);
@@ -23,7 +23,7 @@ void DepthEstimator::initMatchers()
     bm_->setSpeckleRange(32);
 
     // ── StereoSGBM ────────────────────────────────────────────────────────────
-    // P1, P2: düzlük cezaları; P2 > P1 tutulmalı
+    // P1, P2: smoothness penalties; P2 > P1 must hold
     int win = 5;
     sgbm_ = cv::StereoSGBM::create(
         /*minDisparity=*/0,
@@ -40,12 +40,12 @@ void DepthEstimator::initMatchers()
     );
 }
 
-// ─── Kalibrasyon yükleme ─────────────────────────────────────────────────────
+// ─── Calibration loading ─────────────────────────────────────────────────────
 bool DepthEstimator::loadCalibration(const std::string& yamlPath)
 {
     cv::FileStorage fs(yamlPath, cv::FileStorage::READ);
     if (!fs.isOpened()) {
-        std::cerr << "[DepthEstimator] Kalibrasyon dosyası açılamadı: " << yamlPath << "\n";
+        std::cerr << "[DepthEstimator] Could not open calibration file: " << yamlPath << "\n";
         return false;
     }
 
@@ -55,7 +55,7 @@ bool DepthEstimator::loadCalibration(const std::string& yamlPath)
     fs["R"]  >> R;   fs["T"]  >> T;
 
     if (M1.empty() || M2.empty()) {
-        std::cerr << "[DepthEstimator] Kalibrasyon matrisleri eksik!\n";
+        std::cerr << "[DepthEstimator] Calibration matrices are missing!\n";
         return false;
     }
 
@@ -67,17 +67,17 @@ bool DepthEstimator::loadCalibration(const std::string& yamlPath)
     cv::initUndistortRectifyMap(M1, D1, R1_, P1_, imgSize, CV_16SC2, mapL1_, mapL2_);
     cv::initUndistortRectifyMap(M2, D2, R2_, P2_, imgSize, CV_16SC2, mapR1_, mapR2_);
 
-    // Focal length ve baseline'ı Q matrisinden çıkar
+    // Extract focal length and baseline from the Q matrix
     focalPx_   = static_cast<float>(Q_.at<double>(2, 3));
     baselineM_ = static_cast<float>(-1.0 / Q_.at<double>(3, 2));
 
     calibrated_ = true;
-    std::cout << "[DepthEstimator] Kalibrasyon yüklendi. f=" << focalPx_
+    std::cout << "[DepthEstimator] Calibration loaded. f=" << focalPx_
               << " px, baseline=" << baselineM_ * 100.f << " cm\n";
     return true;
 }
 
-// ─── Ana hesaplama ────────────────────────────────────────────────────────────
+// ─── Main computation ─────────────────────────────────────────────────────────
 DepthResult DepthEstimator::compute(const cv::Mat& left, const cv::Mat& right)
 {
     DepthResult result;
@@ -86,33 +86,33 @@ DepthResult DepthEstimator::compute(const cv::Mat& left, const cv::Mat& right)
     cv::Mat L = left.clone();
     cv::Mat R = right.clone();
 
-    // Simülasyon modunda sağ görüntüyü sol görüntüden türet
+    // In simulation mode, derive right image from left image
     if (simMode_) {
-        // Sağa simShift_ piksel kaydırma: sol piksel aslında daha sağdan geliyor
+        // Shift right by simShift_ pixels: left pixel actually comes from further right
         cv::Mat M = (cv::Mat_<double>(2, 3) << 1, 0, -simShift_, 0, 1, 0);
         cv::warpAffine(L, R, M, L.size());
     }
 
-    // Kalibrasyon varsa rektifikasyon uygula
+    // Apply rectification if calibration is available
     if (calibrated_) {
         rectify(L, R);
     }
 
-    // Gri tonlamaya çevir (StereoBM/SGBM gri giriş ister)
+    // Convert to grayscale (StereoBM/SGBM requires grayscale input)
     cv::Mat grayL, grayR;
     cv::cvtColor(L, grayL, cv::COLOR_BGR2GRAY);
     cv::cvtColor(R, grayR, cv::COLOR_BGR2GRAY);
 
-    // Disparity hesapla
+    // Compute disparity
     result.disparity16 = computeDisparity(grayL, grayR);
 
-    // float disparity (gerçek piksel değeri)
+    // float disparity (actual pixel value)
     result.disparity16.convertTo(result.disparityF, CV_32F, 1.0 / 16.0);
 
-    // Derinlik haritası (metre)
+    // Depth map (meters)
     result.depthMap = disparityToDepth(result.disparity16);
 
-    // İstatistik
+    // Statistics
     cv::Mat validMask = result.depthMap > 0.01f;
     if (cv::countNonZero(validMask) > 0) {
         double mn, mx;
@@ -121,7 +121,7 @@ DepthResult DepthEstimator::compute(const cv::Mat& left, const cv::Mat& right)
         result.maxDepthM = static_cast<float>(mx);
     }
 
-    // Renk görüntüsü
+    // Color image
     result.colorDepth = colorize(result.depthMap);
     result.valid = true;
     return result;
@@ -135,7 +135,7 @@ float DepthEstimator::depthAt(const DepthResult& r, int x, int y) const
     return r.depthMap.at<float>(y, x);
 }
 
-// ─── Rektifikasyon ───────────────────────────────────────────────────────────
+// ─── Rectification ───────────────────────────────────────────────────────────
 void DepthEstimator::rectify(cv::Mat& left, cv::Mat& right) const
 {
     cv::Mat rL, rR;
@@ -145,7 +145,7 @@ void DepthEstimator::rectify(cv::Mat& left, cv::Mat& right) const
     right = rR;
 }
 
-// ─── Disparity hesabı ────────────────────────────────────────────────────────
+// ─── Disparity computation ────────────────────────────────────────────────────
 cv::Mat DepthEstimator::computeDisparity(const cv::Mat& grayL, const cv::Mat& grayR)
 {
     cv::Mat disp;
@@ -154,10 +154,10 @@ cv::Mat DepthEstimator::computeDisparity(const cv::Mat& grayL, const cv::Mat& gr
     } else {
         sgbm_->compute(grayL, grayR, disp);
     }
-    return disp;   // CV_16S, gerçek = disp / 16
+    return disp;   // CV_16S, actual = disp / 16
 }
 
-// ─── Disparity → Derinlik (metre) ────────────────────────────────────────────
+// ─── Disparity → Depth (meters) ──────────────────────────────────────────────
 //   depth = (focalPx * baselineM) / disparity_px
 cv::Mat DepthEstimator::disparityToDepth(const cv::Mat& disp16)
 {
@@ -177,18 +177,18 @@ cv::Mat DepthEstimator::disparityToDepth(const cv::Mat& disp16)
     return depth;
 }
 
-// ─── Renklendirme (JET colormap) ─────────────────────────────────────────────
+// ─── Colorization (JET colormap) ─────────────────────────────────────────────
 cv::Mat DepthEstimator::colorize(const cv::Mat& depthM)
 {
     cv::Mat norm;
-    // 0 → kırmızı (yakın), maxDepthM_ → mavi (uzak) – JET tersine çevriliyor
+    // 0 → red (near), maxDepthM_ → blue (far) – JET is inverted
     cv::normalize(depthM, norm, 0, 255, cv::NORM_MINMAX, CV_8U);
-    cv::bitwise_not(norm, norm);   // yakın = sıcak renk
+    cv::bitwise_not(norm, norm);   // near = warm color
 
     cv::Mat colored;
     cv::applyColorMap(norm, colored, cv::COLORMAP_JET);
 
-    // Sıfır disparity piksellerini siyah yap
+    // Make zero disparity pixels black
     cv::Mat mask = (depthM < 0.01f);
     colored.setTo(cv::Scalar(0, 0, 0), mask);
 

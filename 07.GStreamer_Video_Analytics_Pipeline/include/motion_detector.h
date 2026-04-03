@@ -1,10 +1,9 @@
 /**
  * @file motion_detector.h
- * @brief Video akışında hareket algılama sınıfı
- * 
- * Bu sınıf, video karelerini analiz ederek hareket algılama,
- * hareket bölgelerini işaretleme ve hareket olaylarını raporlama
- * işlevlerini sağlar.
+ * @brief Motion detection class for video streams
+ *
+ * This class provides functionality for detecting motion by analyzing
+ * video frames, marking motion regions, and reporting motion events.
  */
 
 #ifndef MOTION_DETECTOR_H
@@ -25,92 +24,92 @@
 #endif
 
 /**
- * @brief Hareket algılama algoritmaları
+ * @brief Motion detection algorithms
  */
 enum class MotionAlgorithm {
-    FRAME_DIFF,         // Basit kare farkı
-    BACKGROUND_SUB,     // Arka plan çıkarma
-    OPTICAL_FLOW,       // Optik akış
+    FRAME_DIFF,         // Simple frame difference
+    BACKGROUND_SUB,     // Background subtraction
+    OPTICAL_FLOW,       // Optical flow
     MOG2,              // Mixture of Gaussians v2
     KNN                // K-Nearest Neighbors
 };
 
 /**
- * @brief Hareket bölgesi bilgisi
+ * @brief Motion region information
  */
 struct MotionRegion {
-    int x;              // Sol üst köşe X koordinatı
-    int y;              // Sol üst köşe Y koordinatı
-    int width;          // Genişlik
-    int height;         // Yükseklik
-    double intensity;   // Hareket yoğunluğu (0.0 - 1.0)
-    guint64 timestamp;  // Algılama zamanı
+    int x;              // Top-left corner X coordinate
+    int y;              // Top-left corner Y coordinate
+    int width;          // Width
+    int height;         // Height
+    double intensity;   // Motion intensity (0.0 - 1.0)
+    guint64 timestamp;  // Detection time
 };
 
 /**
- * @brief Hareket algılama parametreleri
+ * @brief Motion detection parameters
  */
 struct MotionDetectionParams {
-    // Algoritma seçimi
+    // Algorithm selection
     MotionAlgorithm algorithm = MotionAlgorithm::MOG2;
-    
-    // Hassasiyet ayarları
-    double sensitivity = 0.5;           // 0.0 (düşük) - 1.0 (yüksek)
-    double threshold = 25.0;            // Piksel değişim eşiği
-    
-    // Arka plan çıkarma parametreleri
-    int history_length = 500;           // Arka plan geçmişi uzunluğu
-    double learning_rate = 0.005;       // Öğrenme oranı
-    bool detect_shadows = true;         // Gölge tespiti
-    
-    // Morfolojik işlemler
-    int erosion_size = 2;              // Erozyon kernel boyutu
-    int dilation_size = 4;             // Dilatasyon kernel boyutu
-    
-    // Bölge filtreleme
-    int min_area = 500;                // Minimum hareket alanı (piksel²)
-    int max_area = 100000;             // Maksimum hareket alanı
-    double min_aspect_ratio = 0.3;     // Minimum en/boy oranı
-    double max_aspect_ratio = 3.0;     // Maksimum en/boy oranı
-    
-    // Hareket takibi
-    bool enable_tracking = true;        // Nesne takibi
-    int max_tracked_objects = 10;       // Maksimum takip edilecek nesne
-    
-    // Görselleştirme
-    bool draw_motion_regions = true;    // Hareket bölgelerini çiz
-    bool draw_motion_vectors = false;   // Hareket vektörlerini çiz
-    bool show_debug_view = false;       // Debug görünümü
-    
-    // Alarm ayarları
-    bool enable_alerts = true;          // Hareket alarmları
-    double alert_threshold = 0.1;       // Alarm eşiği (toplam alan yüzdesi)
-    int alert_cooldown_ms = 5000;      // Alarm bekleme süresi
+
+    // Sensitivity settings
+    double sensitivity = 0.5;           // 0.0 (low) - 1.0 (high)
+    double threshold = 25.0;            // Pixel change threshold
+
+    // Background subtraction parameters
+    int history_length = 500;           // Background history length
+    double learning_rate = 0.005;       // Learning rate
+    bool detect_shadows = true;         // Shadow detection
+
+    // Morphological operations
+    int erosion_size = 2;              // Erosion kernel size
+    int dilation_size = 4;             // Dilation kernel size
+
+    // Region filtering
+    int min_area = 500;                // Minimum motion area (pixels squared)
+    int max_area = 100000;             // Maximum motion area
+    double min_aspect_ratio = 0.3;     // Minimum aspect ratio
+    double max_aspect_ratio = 3.0;     // Maximum aspect ratio
+
+    // Motion tracking
+    bool enable_tracking = true;        // Object tracking
+    int max_tracked_objects = 10;       // Maximum tracked objects
+
+    // Visualization
+    bool draw_motion_regions = true;    // Draw motion regions
+    bool draw_motion_vectors = false;   // Draw motion vectors
+    bool show_debug_view = false;       // Debug view
+
+    // Alert settings
+    bool enable_alerts = true;          // Motion alerts
+    double alert_threshold = 0.1;       // Alert threshold (total area percentage)
+    int alert_cooldown_ms = 5000;      // Alert cooldown time
 };
 
 /**
- * @brief Hareket istatistikleri
+ * @brief Motion statistics
  */
 struct MotionStats {
-    guint64 total_frames = 0;          // İşlenen toplam kare
-    guint64 motion_frames = 0;         // Hareket algılanan kareler
-    double average_motion_area = 0.0;   // Ortalama hareket alanı
-    double max_motion_area = 0.0;       // Maksimum hareket alanı
-    guint64 total_regions = 0;         // Toplam hareket bölgesi
+    guint64 total_frames = 0;          // Total frames processed
+    guint64 motion_frames = 0;         // Frames with motion detected
+    double average_motion_area = 0.0;   // Average motion area
+    double max_motion_area = 0.0;       // Maximum motion area
+    guint64 total_regions = 0;         // Total motion regions
     std::chrono::time_point<std::chrono::steady_clock> last_motion_time;
 };
 
 /**
- * @brief Hareket olayı callback tipi
- * @param regions Algılanan hareket bölgeleri
- * @param timestamp Olay zamanı
- * @param motion_percentage Hareketin toplam alan yüzdesi
+ * @brief Motion event callback type
+ * @param regions Detected motion regions
+ * @param timestamp Event time
+ * @param motion_percentage Motion percentage of total area
  */
 using MotionEventCallback = std::function<void(
     const std::vector<MotionRegion>&, guint64, double)>;
 
 /**
- * @brief Hareket algılama sınıfı
+ * @brief Motion detection class
  */
 class MotionDetector {
 public:
@@ -118,239 +117,239 @@ public:
      * @brief Constructor
      */
     MotionDetector();
-    
+
     /**
      * @brief Destructor
      */
     ~MotionDetector();
-    
+
     /**
-     * @brief GStreamer elementi oluşturur
-     * @return Hareket algılama elementi
+     * @brief Creates a GStreamer element
+     * @return Motion detection element
      */
     GstElement* createElement();
-    
+
     /**
-     * @brief Algılama parametrelerini ayarlar
-     * @param params Yeni parametreler
+     * @brief Sets detection parameters
+     * @param params New parameters
      */
     void setParameters(const MotionDetectionParams& params);
-    
+
     /**
-     * @brief Mevcut parametreleri döndürür
-     * @return Algılama parametreleri
+     * @brief Returns current parameters
+     * @return Detection parameters
      */
     MotionDetectionParams getParameters() const;
-    
+
     /**
-     * @brief Hareket algılama algoritmasını değiştirir
-     * @param algorithm Yeni algoritma
+     * @brief Changes the motion detection algorithm
+     * @param algorithm New algorithm
      */
     void setAlgorithm(MotionAlgorithm algorithm);
-    
+
     /**
-     * @brief Hassasiyet seviyesini ayarlar
-     * @param sensitivity 0.0 (düşük) - 1.0 (yüksek)
+     * @brief Sets sensitivity level
+     * @param sensitivity 0.0 (low) - 1.0 (high)
      */
     void setSensitivity(double sensitivity);
-    
+
     /**
-     * @brief Hareket olay callback'i ayarlar
-     * @param callback Olay fonksiyonu
+     * @brief Sets the motion event callback
+     * @param callback Event function
      */
     void setMotionEventCallback(MotionEventCallback callback);
-    
+
     /**
-     * @brief İstatistikleri döndürür
-     * @return Hareket istatistikleri
+     * @brief Returns statistics
+     * @return Motion statistics
      */
     MotionStats getStats() const;
-    
+
     /**
-     * @brief İstatistikleri sıfırlar
+     * @brief Resets statistics
      */
     void resetStats();
-    
+
     /**
-     * @brief Mevcut hareket bölgelerini döndürür
-     * @return Hareket bölgeleri listesi
+     * @brief Returns current motion regions
+     * @return List of motion regions
      */
     std::vector<MotionRegion> getCurrentMotions() const;
-    
+
     /**
-     * @brief Hareket algılamayı başlatır/durdurur
-     * @param enable true ise başlat
+     * @brief Starts/stops motion detection
+     * @param enable true to start
      */
     void setEnabled(bool enable);
-    
+
     /**
-     * @brief Algılama durumunu döndürür
-     * @return Aktif ise true
+     * @brief Returns detection state
+     * @return true if active
      */
     bool isEnabled() const { return enabled_; }
-    
+
     /**
-     * @brief İlgi alanı (ROI) ayarlar
-     * @param x Sol üst X koordinatı
-     * @param y Sol üst Y koordinatı
-     * @param width Genişlik
-     * @param height Yükseklik
+     * @brief Sets the region of interest (ROI)
+     * @param x Top-left X coordinate
+     * @param y Top-left Y coordinate
+     * @param width Width
+     * @param height Height
      */
     void setROI(int x, int y, int width, int height);
-    
+
     /**
-     * @brief İlgi alanını temizler
+     * @brief Clears the region of interest
      */
     void clearROI();
-    
+
     /**
-     * @brief Hariç tutulacak bölge ekler
-     * @param x Sol üst X koordinatı
-     * @param y Sol üst Y koordinatı
-     * @param width Genişlik
-     * @param height Yükseklik
+     * @brief Adds an exclusion zone
+     * @param x Top-left X coordinate
+     * @param y Top-left Y coordinate
+     * @param width Width
+     * @param height Height
      */
     void addExclusionZone(int x, int y, int width, int height);
-    
+
     /**
-     * @brief Tüm hariç tutma bölgelerini temizler
+     * @brief Clears all exclusion zones
      */
     void clearExclusionZones();
 
 #ifdef HAVE_OPENCV
     /**
-     * @brief OpenCV tabanlı hareket maskesini döndürür
-     * @return Hareket maskesi (binary görüntü)
+     * @brief Returns the OpenCV-based motion mask
+     * @return Motion mask (binary image)
      */
     cv::Mat getMotionMask() const;
-    
+
     /**
-     * @brief Arka plan modelini döndürür
-     * @return Arka plan görüntüsü
+     * @brief Returns the background model
+     * @return Background image
      */
     cv::Mat getBackgroundModel() const;
 #endif
 
 private:
     /**
-     * @brief Video karesini işler
+     * @brief Processes a video frame
      * @param buffer GStreamer buffer
-     * @param info Video bilgisi
-     * @return İşlenmiş buffer
+     * @param info Video information
+     * @return Processed buffer
      */
     GstBuffer* processFrame(GstBuffer* buffer, const GstVideoInfo* info);
-    
+
 #ifdef HAVE_OPENCV
     /**
-     * @brief OpenCV ile hareket algıla
-     * @param frame Mevcut kare
-     * @return Algılanan hareket bölgeleri
+     * @brief Detect motion with OpenCV
+     * @param frame Current frame
+     * @return Detected motion regions
      */
     std::vector<MotionRegion> detectMotion(const cv::Mat& frame);
-    
+
     /**
-     * @brief Kare farkı algoritması
-     * @param frame Mevcut kare
-     * @return Hareket maskesi
+     * @brief Frame difference algorithm
+     * @param frame Current frame
+     * @return Motion mask
      */
     cv::Mat frameDifference(const cv::Mat& frame);
-    
+
     /**
-     * @brief Arka plan çıkarma algoritması
-     * @param frame Mevcut kare
-     * @return Hareket maskesi
+     * @brief Background subtraction algorithm
+     * @param frame Current frame
+     * @return Motion mask
      */
     cv::Mat backgroundSubtraction(const cv::Mat& frame);
-    
+
     /**
-     * @brief Optik akış algoritması
-     * @param frame Mevcut kare
-     * @return Hareket vektörleri
+     * @brief Optical flow algorithm
+     * @param frame Current frame
+     * @return Motion vectors
      */
     std::vector<cv::Point2f> opticalFlow(const cv::Mat& frame);
-    
+
     /**
-     * @brief Morfolojik işlemler uygula
-     * @param mask İkili hareket maskesi
+     * @brief Apply morphological operations
+     * @param mask Binary motion mask
      */
     void applyMorphology(cv::Mat& mask);
-    
+
     /**
-     * @brief Hareket bölgelerini bul
-     * @param mask İkili hareket maskesi
-     * @return Hareket bölgeleri
+     * @brief Find motion regions
+     * @param mask Binary motion mask
+     * @return Motion regions
      */
     std::vector<MotionRegion> findMotionRegions(const cv::Mat& mask);
-    
+
     /**
-     * @brief Hareket bölgelerini filtrele
-     * @param regions Ham hareket bölgeleri
-     * @return Filtrelenmiş bölgeler
+     * @brief Filter motion regions
+     * @param regions Raw motion regions
+     * @return Filtered regions
      */
     std::vector<MotionRegion> filterRegions(const std::vector<MotionRegion>& regions);
-    
+
     /**
-     * @brief Hareket bölgelerini çiz
-     * @param frame Üzerine çizilecek kare
-     * @param regions Hareket bölgeleri
+     * @brief Draw motion regions
+     * @param frame Frame to draw on
+     * @param regions Motion regions
      */
     void drawMotionRegions(cv::Mat& frame, const std::vector<MotionRegion>& regions);
 #endif
-    
+
     /**
      * @brief Transform callback
      */
     static GstFlowReturn transformCallback(GstBaseTransform* trans,
                                          GstBuffer* inbuf,
                                          GstBuffer* outbuf);
-    
+
     /**
-     * @brief Hareket olayını tetikle
-     * @param regions Hareket bölgeleri
-     * @param timestamp Olay zamanı
+     * @brief Trigger motion event
+     * @param regions Motion regions
+     * @param timestamp Event time
      */
     void triggerMotionEvent(const std::vector<MotionRegion>& regions, guint64 timestamp);
-    
-    // Üye değişkenler
-    GstElement* element_ = nullptr;              // GStreamer elementi
-    MotionDetectionParams params_;               // Algılama parametreleri
-    MotionStats stats_;                         // İstatistikler
-    mutable std::mutex params_mutex_;           // Parametre mutex'i
-    mutable std::mutex stats_mutex_;            // İstatistik mutex'i
-    
-    bool enabled_ = true;                       // Algılama durumu
-    MotionEventCallback motion_callback_;       // Hareket olay callback'i
-    
+
+    // Member variables
+    GstElement* element_ = nullptr;              // GStreamer element
+    MotionDetectionParams params_;               // Detection parameters
+    MotionStats stats_;                         // Statistics
+    mutable std::mutex params_mutex_;           // Parameter mutex
+    mutable std::mutex stats_mutex_;            // Statistics mutex
+
+    bool enabled_ = true;                       // Detection state
+    MotionEventCallback motion_callback_;       // Motion event callback
+
 #ifdef HAVE_OPENCV
-    // OpenCV değişkenleri
-    cv::Mat previous_frame_;                    // Önceki kare
-    cv::Mat background_model_;                  // Arka plan modeli
-    cv::Mat motion_mask_;                       // Hareket maskesi
-    
-    // Arka plan çıkarıcılar
+    // OpenCV variables
+    cv::Mat previous_frame_;                    // Previous frame
+    cv::Mat background_model_;                  // Background model
+    cv::Mat motion_mask_;                       // Motion mask
+
+    // Background subtractors
     cv::Ptr<cv::BackgroundSubtractor> bg_subtractor_;
-    
-    // Optik akış için
-    cv::Mat previous_gray_;                     // Önceki gri kare
-    std::vector<cv::Point2f> previous_points_;  // Önceki özellik noktaları
+
+    // For optical flow
+    cv::Mat previous_gray_;                     // Previous grayscale frame
+    std::vector<cv::Point2f> previous_points_;  // Previous feature points
 #endif
-    
-    // Hareket bölgeleri
-    std::vector<MotionRegion> current_motions_; // Mevcut hareket bölgeleri
-    mutable std::mutex motions_mutex_;          // Hareket bölgeleri mutex'i
-    
-    // ROI ve hariç tutma bölgeleri
-    cv::Rect roi_;                              // İlgi alanı
-    bool has_roi_ = false;                      // ROI tanımlı mı
-    std::vector<cv::Rect> exclusion_zones_;     // Hariç tutma bölgeleri
-    
-    // Alarm yönetimi
+
+    // Motion regions
+    std::vector<MotionRegion> current_motions_; // Current motion regions
+    mutable std::mutex motions_mutex_;          // Motion regions mutex
+
+    // ROI and exclusion zones
+    cv::Rect roi_;                              // Region of interest
+    bool has_roi_ = false;                      // ROI defined
+    std::vector<cv::Rect> exclusion_zones_;     // Exclusion zones
+
+    // Alert management
     std::chrono::time_point<std::chrono::steady_clock> last_alert_time_;
-    bool in_cooldown_ = false;                  // Alarm bekleme durumu
-    
-    // Hareket geçmişi (takip için)
+    bool in_cooldown_ = false;                  // Alert cooldown state
+
+    // Motion history (for tracking)
     std::deque<std::vector<MotionRegion>> motion_history_;
-    const size_t max_history_size_ = 30;        // 1 saniyelik geçmiş (30fps)
+    const size_t max_history_size_ = 30;        // 1 second history (30fps)
 };
 
 #endif // MOTION_DETECTOR_H

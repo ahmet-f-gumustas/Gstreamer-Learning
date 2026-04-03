@@ -5,16 +5,16 @@
 #include <gst/gst.h>
 
 namespace Utils {
-    // GStreamer zaman formatını okunabilir hale getirme
+    // Convert GStreamer time format to human-readable string
     std::string formatTime(gint64 time);
     
-    // Caps'ten format bilgisini çıkarma
+    // Extract format information from caps
     std::string getMediaTypeFromCaps(GstCaps *caps);
     
-    // Hata mesajlarını işleme
+    // Handle error messages
     void handleError(GError *error, const char *debug);
     
-    // Basit input yardımcıları
+    // Simple input helpers
     bool getYesNoInput(const std::string& prompt);
     std::string getInput(const std::string& prompt);
 }

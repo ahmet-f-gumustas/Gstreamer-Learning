@@ -14,24 +14,24 @@ OpticalFlowDetector::~OpticalFlowDetector() {
 
 bool OpticalFlowDetector::initialize(const std::string& sourceInput) {
     if (!setupPipeline(sourceInput)) {
-        Utils::logError("Pipeline kurulumu başarısız!");
+        Utils::logError("Pipeline setup failed!");
         return false;
     }
     
     isInitialized = true;
-    Utils::logInfo("OpticalFlowDetector başarıyla başlatıldı");
+    Utils::logInfo("OpticalFlowDetector initialized successfully");
     return true;
 }
 
 bool OpticalFlowDetector::setupPipeline(const std::string& sourceInput) {
-    // Pipeline oluştur
+    // Create pipeline
     pipeline = gst_pipeline_new("optical-flow-pipeline");
     if (!pipeline) {
-        Utils::logError("Pipeline oluşturulamadı");
+        Utils::logError("Failed to create pipeline");
         return false;
     }
     
-    // Source element seç
+    // Select source element
     std::string sourceStr = sourceInput.empty() ? Utils::detectVideoSource() : sourceInput;
     
     if (sourceStr == "webcam") {
@@ -41,31 +41,31 @@ bool OpticalFlowDetector::setupPipeline(const std::string& sourceInput) {
         source = gst_element_factory_make("videotestsrc", "source");
         g_object_set(G_OBJECT(source), "pattern", 18, nullptr); // Ball pattern
     } else {
-        // Dosya kaynağı
+        // File source
         source = gst_element_factory_make("filesrc", "source");
         g_object_set(G_OBJECT(source), "location", sourceStr.c_str(), nullptr);
     }
     
     if (!source) {
-        Utils::logError("Source element oluşturulamadı");
+        Utils::logError("Failed to create source element");
         return false;
     }
     
     // Convert element
     convert = gst_element_factory_make("videoconvert", "convert");
     if (!convert) {
-        Utils::logError("VideoConvert element oluşturulamadı");
+        Utils::logError("Failed to create VideoConvert element");
         return false;
     }
     
     // AppSink element
     appsink = gst_element_factory_make("appsink", "appsink");
     if (!appsink) {
-        Utils::logError("AppSink element oluşturulamadı");
+        Utils::logError("Failed to create AppSink element");
         return false;
     }
     
-    // AppSink yapılandırması
+    // AppSink configuration
     GstCaps* caps = gst_caps_new_simple("video/x-raw",
                                         "format", G_TYPE_STRING, "BGR",
                                         "width", G_TYPE_INT, 640,
@@ -82,13 +82,13 @@ bool OpticalFlowDetector::setupPipeline(const std::string& sourceInput) {
     
     gst_caps_unref(caps);
     
-    // Callback bağla
+    // Connect callback
     g_signal_connect(appsink, "new-sample", G_CALLBACK(onNewSample), this);
     
-    // Elementleri pipeline'a ekle
+    // Add elements to pipeline
     gst_bin_add_many(GST_BIN(pipeline), source, convert, appsink, nullptr);
     
-    // Dosya kaynağı için decoder ekle
+    // Add decoder for file source
     if (sourceStr != "webcam" && sourceStr != "test") {
         GstElement* demux = gst_element_factory_make("qtdemux", "demux");
         GstElement* decoder = gst_element_factory_make("avdec_h264", "decoder");
@@ -99,11 +99,11 @@ bool OpticalFlowDetector::setupPipeline(const std::string& sourceInput) {
             if (!gst_element_link(source, demux) ||
                 !gst_element_link(decoder, convert) ||
                 !gst_element_link(convert, appsink)) {
-                Utils::logError("Elementler bağlanamadı (dosya modu)");
+                Utils::logError("Failed to link elements (file mode)");
                 return false;
             }
             
-            // Dynamic pad linking için demux callback
+            // Demux callback for dynamic pad linking
             g_signal_connect(demux, "pad-added", 
                            G_CALLBACK(+[](GstElement*, GstPad* pad, gpointer data) {
                                GstElement* decoder = static_cast<GstElement*>(data);
@@ -113,14 +113,14 @@ bool OpticalFlowDetector::setupPipeline(const std::string& sourceInput) {
                            }), decoder);
         }
     } else {
-        // Webcam veya test source için direkt bağlantı
+        // Direct linking for webcam or test source
         if (!gst_element_link_many(source, convert, appsink, nullptr)) {
-            Utils::logError("Elementler bağlanamadı");
+            Utils::logError("Failed to link elements");
             return false;
         }
     }
     
-    // Bus al
+    // Get bus
     bus = gst_element_get_bus(pipeline);
     
     return true;
@@ -128,20 +128,20 @@ bool OpticalFlowDetector::setupPipeline(const std::string& sourceInput) {
 
 void OpticalFlowDetector::run() {
     if (!isInitialized) {
-        Utils::logError("Detector başlatılmamış!");
+        Utils::logError("Detector not initialized!");
         return;
     }
     
-    // Pipeline'ı başlat
+    // Start pipeline
     GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE) {
-        Utils::logError("Pipeline başlatılamadı!");
+        Utils::logError("Failed to start pipeline!");
         return;
     }
     
-    Utils::logInfo("Optical Flow detection başladı. 'q' tuşuna basarak çıkabilirsiniz.");
+    Utils::logInfo("Optical Flow detection started. Press 'q' to quit.");
     
-    // Ana döngü
+    // Main loop
     GstMessage* msg;
     bool terminate = false;
     
@@ -165,7 +165,7 @@ void OpticalFlowDetector::run() {
             gst_message_unref(msg);
         }
         
-        // OpenCV window kontrol
+        // OpenCV window control
         if (cv::waitKey(1) == 'q') {
             terminate = true;
         }
@@ -185,7 +185,7 @@ void OpticalFlowDetector::stop() {
     }
     
     cv::destroyAllWindows();
-    Utils::logInfo("OpticalFlowDetector durduruldu");
+    Utils::logInfo("OpticalFlowDetector stopped");
 }
 
 GstFlowReturn OpticalFlowDetector::onNewSample(GstAppSink* appsink, gpointer userData) {
@@ -239,7 +239,7 @@ void OpticalFlowDetector::processFrame(const cv::Mat& frame) {
         drawOpticalFlow(currFrame);
     }
     
-    // Her 30 frame'de bir yeni corner detect et
+    // Detect new corners every 30 frames
     static int frameCount = 0;
     frameCount++;
     if (frameCount % 30 == 0 || prevPoints.size() < 10) {
@@ -247,11 +247,11 @@ void OpticalFlowDetector::processFrame(const cv::Mat& frame) {
         frameCount = 0;
     }
     
-    // Sonraki frame için hazırla
+    // Prepare for next frame
     prevGray = currGray.clone();
     prevPoints = currPoints;
     
-    // Sonucu göster
+    // Display result
     cv::imshow("Optical Flow Detection", currFrame);
 }
 
@@ -262,7 +262,7 @@ void OpticalFlowDetector::detectCorners(const cv::Mat& grayFrame) {
     
     if (!corners.empty()) {
         prevPoints = corners;
-        Utils::logInfo("Yeni köşeler tespit edildi: " + std::to_string(corners.size()));
+        Utils::logInfo("New corners detected: " + std::to_string(corners.size()));
     }
 }
 
@@ -275,7 +275,7 @@ void OpticalFlowDetector::calculateOpticalFlow() {
     
     cv::calcOpticalFlowPyrLK(prevGray, currGray, prevPoints, currPoints, status, errors);
     
-    // Geçerli noktaları filtrele
+    // Filter valid points
     std::vector<cv::Point2f> goodNew, goodOld;
     for (size_t i = 0; i < currPoints.size(); i++) {
         if (status[i] == 1) {
@@ -289,22 +289,22 @@ void OpticalFlowDetector::calculateOpticalFlow() {
 }
 
 void OpticalFlowDetector::drawOpticalFlow(cv::Mat& frame) {
-    // Hareket vektörlerini çiz
+    // Draw motion vectors
     for (size_t i = 0; i < currPoints.size(); i++) {
         cv::Point2f movement = currPoints[i] - prevPoints[i];
         float magnitude = cv::norm(movement);
         
-        if (magnitude > 1.0) { // Minimum hareket eşiği
-            // Hareket vektörü
+        if (magnitude > 1.0) { // Minimum motion threshold
+            // Motion vector
             cv::arrowedLine(frame, prevPoints[i], currPoints[i], 
                            cv::Scalar(0, 255, 0), 2, 8, 0, 0.3);
             
-            // Nokta
+            // Point
             cv::circle(frame, currPoints[i], 3, cv::Scalar(0, 0, 255), -1);
         }
     }
     
-    // Bilgi metni
+    // Info text
     std::string info = "Tracked Points: " + std::to_string(currPoints.size());
     cv::putText(frame, info, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.7, 
                cv::Scalar(255, 255, 255), 2);

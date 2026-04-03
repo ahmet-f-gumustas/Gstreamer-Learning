@@ -5,7 +5,7 @@
 MediaPlayer::MediaPlayer() 
     : pipeline(nullptr), bus(nullptr), busWatchId(0), currentState(State::STOPPED) {
     
-    // GStreamer'ı başlat
+    // Initialize GStreamer
     gst_init(nullptr, nullptr);
 }
 
@@ -14,22 +14,22 @@ MediaPlayer::~MediaPlayer() {
 }
 
 bool MediaPlayer::openFile(const std::string& filePath) {
-    // Eğer halihazırda bir pipeline varsa, önce temizle
+    // If a pipeline already exists, clean it up first
     cleanup();
     
-    // Yeni pipeline oluştur
+    // Create new pipeline
     return buildPipeline(filePath);
 }
 
 bool MediaPlayer::buildPipeline(const std::string& filePath) {
-    // Playbin kullanan bir pipeline oluştur
+    // Create a pipeline using playbin
     pipeline = gst_element_factory_make("playbin", "player");
     if (!pipeline) {
-        std::cerr << "Pipeline oluşturulamadı!" << std::endl;
+        std::cerr << "Failed to create pipeline!" << std::endl;
         return false;
     }
     
-    // Dosya yolunu URI formatına çevir
+    // Convert file path to URI format
     gchar *uri;
     if (gst_uri_is_valid(filePath.c_str())) {
         uri = g_strdup(filePath.c_str());
@@ -37,18 +37,18 @@ bool MediaPlayer::buildPipeline(const std::string& filePath) {
         uri = gst_filename_to_uri(filePath.c_str(), nullptr);
     }
     
-    // URI'yi pipeline'a ayarla
+    // Set the URI on the pipeline
     g_object_set(G_OBJECT(pipeline), "uri", uri, nullptr);
     g_free(uri);
     
-    // Bus dinleyicisi oluştur
+    // Create bus listener
     bus = gst_element_get_bus(pipeline);
     busWatchId = gst_bus_add_watch(bus, busCallback, this);
     
-    // Hazırlık durumuna getir
+    // Set to ready state
     GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PAUSED);
     if (ret == GST_STATE_CHANGE_FAILURE) {
-        std::cerr << "Pipeline PAUSED durumuna getirilemedi!" << std::endl;
+        std::cerr << "Failed to set pipeline to PAUSED state!" << std::endl;
         cleanup();
         return false;
     }
@@ -63,7 +63,7 @@ bool MediaPlayer::play() {
     
     GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE) {
-        std::cerr << "Pipeline PLAYING durumuna getirilemedi!" << std::endl;
+        std::cerr << "Failed to set pipeline to PLAYING state!" << std::endl;
         return false;
     }
     
@@ -91,7 +91,7 @@ bool MediaPlayer::stop() {
     
     GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_READY);
     if (ret == GST_STATE_CHANGE_FAILURE) {
-        std::cerr << "Pipeline READY durumuna getirilemedi!" << std::endl;
+        std::cerr << "Failed to set pipeline to READY state!" << std::endl;
         return false;
     }
     
@@ -113,7 +113,7 @@ gint64 MediaPlayer::getPosition() const {
     
     gint64 position;
     if (!gst_element_query_position(pipeline, GST_FORMAT_TIME, &position)) {
-        std::cerr << "Pozisyon alınamadı!" << std::endl;
+        std::cerr << "Failed to get position!" << std::endl;
         return -1;
     }
     
@@ -126,7 +126,7 @@ gint64 MediaPlayer::getDuration() const {
     
     gint64 duration;
     if (!gst_element_query_duration(pipeline, GST_FORMAT_TIME, &duration)) {
-        std::cerr << "Süre alınamadı!" << std::endl;
+        std::cerr << "Failed to get duration!" << std::endl;
         return -1;
     }
     
@@ -150,7 +150,7 @@ bool MediaPlayer::seekRelative(gint64 offset) {
     if (position < 0)
         return false;
     
-    // Negatif pozisyonları engelle
+    // Prevent negative positions
     if (offset < 0 && position < -offset)
         position = 0;
     else
@@ -161,21 +161,21 @@ bool MediaPlayer::seekRelative(gint64 offset) {
 
 std::string MediaPlayer::getMediaInfo() const {
     if (!pipeline)
-        return "Medya yok";
+        return "No media";
     
     std::string info;
     gint64 duration = getDuration();
     
     if (duration > 0) {
-        info += "Süre: " + Utils::formatTime(duration) + "\n";
+        info += "Duration: " + Utils::formatTime(duration) + "\n";
     }
     
-    // Stream bilgilerini al
+    // Get stream information
     g_object_get(pipeline, "n-video", &duration, nullptr);
-    info += "Video akışları: " + std::to_string(duration) + "\n";
+    info += "Video streams: " + std::to_string(duration) + "\n";
     
     g_object_get(pipeline, "n-audio", &duration, nullptr);
-    info += "Ses akışları: " + std::to_string(duration) + "\n";
+    info += "Audio streams: " + std::to_string(duration) + "\n";
     
     return info;
 }
@@ -218,17 +218,17 @@ gboolean MediaPlayer::busCallback(GstBus *bus, GstMessage *message, gpointer dat
             break;
         }
         case GST_MESSAGE_EOS:
-            std::cout << "Medya dosyasının sonuna ulaşıldı." << std::endl;
+            std::cout << "End of media file reached." << std::endl;
             player->stop();
             break;
         case GST_MESSAGE_STATE_CHANGED:
-            // İzlemek istediğimiz belirli durum değişiklikleri olabilir
+            // There may be specific state changes we want to monitor
             break;
         default:
-            // Diğer mesaj türleri
+            // Other message types
             break;
     }
     
-    // TRUE döndür ki callback'i kaldırma
+    // Return TRUE to keep the callback active
     return TRUE;
 }

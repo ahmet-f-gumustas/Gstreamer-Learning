@@ -1,6 +1,6 @@
 /**
  * @file rtsp_streamer.cpp
- * @brief RTSP server ve streaming yönetim sınıfı implementasyonu
+ * @brief RTSP server and streaming management class implementation
  */
 
 #include "rtsp_streamer.h"
@@ -14,14 +14,14 @@
 RTSPStreamer::RTSPStreamer(const RTSPConfig& config)
     : config_(config) {
     
-    // GStreamer RTSP server kütüphanesini başlat
+    // Initialize GStreamer RTSP server library
     static bool rtsp_initialized = false;
     if (!rtsp_initialized) {
         gst_init(nullptr, nullptr);
         rtsp_initialized = true;
     }
     
-    // Başlangıç zamanını kaydet
+    // Record start time
     start_time_ = std::chrono::steady_clock::now();
 }
 
@@ -33,31 +33,31 @@ RTSPStreamer::~RTSPStreamer() {
 }
 
 /**
- * @brief RTSP server'ı başlatır
+ * @brief Starts the RTSP server
  */
 bool RTSPStreamer::start() {
     if (is_running_.load()) {
         return true;
     }
     
-    // RTSP server oluştur
+    // Create RTSP server
     if (!createServer()) {
-        std::cerr << "[RTSPStreamer] Server oluşturulamadı!" << std::endl;
+        std::cerr << "[RTSPStreamer] Failed to create server!" << std::endl;
         return false;
     }
     
-    // Server thread'ini başlat
+    // Start server thread
     is_running_ = true;
     server_thread_ = std::make_unique<std::thread>(&RTSPStreamer::serverMainLoop, this);
     
-    std::cout << "[RTSPStreamer] RTSP server başlatıldı: " 
+    std::cout << "[RTSPStreamer] RTSP server started: " 
               << getStreamURL() << std::endl;
     
     return true;
 }
 
 /**
- * @brief RTSP server'ı durdurur
+ * @brief Stops the RTSP server
  */
 void RTSPStreamer::stop() {
     if (!is_running_.load()) {
@@ -66,17 +66,17 @@ void RTSPStreamer::stop() {
     
     is_running_ = false;
     
-    // Ana döngüyü durdur
+    // Stop main loop
     if (main_loop_) {
         g_main_loop_quit(main_loop_);
     }
     
-    // Thread'in bitmesini bekle
+    // Wait for thread to finish
     if (server_thread_ && server_thread_->joinable()) {
         server_thread_->join();
     }
     
-    // Kaynakları temizle
+    // Clean up resources
     if (server_) {
         g_object_unref(server_);
         server_ = nullptr;
@@ -102,44 +102,44 @@ void RTSPStreamer::stop() {
         address_pool_ = nullptr;
     }
     
-    std::cout << "[RTSPStreamer] RTSP server durduruldu." << std::endl;
+    std::cout << "[RTSPStreamer] RTSP server stopped." << std::endl;
 }
 
 /**
- * @brief Video kaynağı elementini ayarlar
+ * @brief Sets the video source element
  */
 void RTSPStreamer::setVideoSource(GstElement* source) {
     video_source_ = source;
 }
 
 /**
- * @brief Ses kaynağı elementini ayarlar
+ * @brief Sets the audio source element
  */
 void RTSPStreamer::setAudioSource(GstElement* source) {
     audio_source_ = source;
 }
 
 /**
- * @brief Yapılandırmayı günceller
+ * @brief Updates configuration
  */
 void RTSPStreamer::updateConfig(const RTSPConfig& config) {
     config_ = config;
     
-    // Server çalışıyorsa güvenlik ayarlarını güncelle
+    // Update security settings if server is running
     if (is_running_ && auth_) {
         applySecurity();
     }
 }
 
 /**
- * @brief Mevcut yapılandırmayı döndürür
+ * @brief Returns current configuration
  */
 RTSPConfig RTSPStreamer::getConfig() const {
     return config_;
 }
 
 /**
- * @brief Stream URL'sini döndürür
+ * @brief Returns the stream URL
  */
 std::string RTSPStreamer::getStreamURL() const {
     std::stringstream url;
@@ -148,7 +148,7 @@ std::string RTSPStreamer::getStreamURL() const {
 }
 
 /**
- * @brief Aktif istemci listesini döndürür
+ * @brief Returns the list of active clients
  */
 std::vector<ClientInfo> RTSPStreamer::getClients() const {
     std::lock_guard<std::mutex> lock(clients_mutex_);
@@ -162,14 +162,14 @@ std::vector<ClientInfo> RTSPStreamer::getClients() const {
 }
 
 /**
- * @brief İstemciyi bağlantıdan koparır
+ * @brief Disconnects a client
  */
 bool RTSPStreamer::disconnectClient(const std::string& client_id) {
     std::lock_guard<std::mutex> lock(clients_mutex_);
     
     auto it = clients_.find(client_id);
     if (it != clients_.end()) {
-        // TODO: GStreamer API ile istemciyi kopar
+        // TODO: Disconnect client via GStreamer API
         clients_.erase(it);
         return true;
     }
@@ -178,12 +178,12 @@ bool RTSPStreamer::disconnectClient(const std::string& client_id) {
 }
 
 /**
- * @brief Server istatistiklerini döndürür
+ * @brief Returns server statistics
  */
 RTSPStats RTSPStreamer::getStats() const {
     std::lock_guard<std::mutex> lock(stats_mutex_);
     
-    // Çalışma süresini güncelle
+    // Update uptime
     auto now = std::chrono::steady_clock::now();
     stats_.uptime = now - start_time_;
     
@@ -191,34 +191,34 @@ RTSPStats RTSPStreamer::getStats() const {
 }
 
 /**
- * @brief İstemci callback'i ayarlar
+ * @brief Sets the client callback
  */
 void RTSPStreamer::setClientCallback(ClientCallback callback) {
     client_callback_ = callback;
 }
 
 /**
- * @brief Yeni mount point ekler
+ * @brief Adds a new mount point
  */
 bool RTSPStreamer::addMountPoint(const std::string& path, const std::string& pipeline) {
     if (!mounts_) {
         return false;
     }
     
-    // Yeni factory oluştur
+    // Create new factory
     GstRTSPMediaFactory* new_factory = gst_rtsp_media_factory_new();
     gst_rtsp_media_factory_set_launch(new_factory, pipeline.c_str());
     gst_rtsp_media_factory_set_shared(new_factory, TRUE);
     
-    // Mount point'e ekle
+    // Add to mount point
     gst_rtsp_mount_points_add_factory(mounts_, path.c_str(), new_factory);
     
-    std::cout << "[RTSPStreamer] Mount point eklendi: " << path << std::endl;
+    std::cout << "[RTSPStreamer] Mount point added: " << path << std::endl;
     return true;
 }
 
 /**
- * @brief Mount point kaldırır
+ * @brief Removes a mount point
  */
 bool RTSPStreamer::removeMountPoint(const std::string& path) {
     if (!mounts_) {
@@ -227,12 +227,12 @@ bool RTSPStreamer::removeMountPoint(const std::string& path) {
     
     gst_rtsp_mount_points_remove_factory(mounts_, path.c_str());
     
-    std::cout << "[RTSPStreamer] Mount point kaldırıldı: " << path << std::endl;
+    std::cout << "[RTSPStreamer] Mount point removed: " << path << std::endl;
     return true;
 }
 
 /**
- * @brief Güvenlik ayarlarını günceller
+ * @brief Updates security settings
  */
 void RTSPStreamer::setSecurity(SecurityType type, 
                                const std::string& username,
@@ -247,30 +247,30 @@ void RTSPStreamer::setSecurity(SecurityType type,
 }
 
 /**
- * @brief IP tabanlı erişim kontrolü ekler
+ * @brief Adds IP-based access control
  */
 void RTSPStreamer::setIPFilter(const std::vector<std::string>& allowed_ips) {
     config_.allowed_ips = allowed_ips;
     
-    // TODO: IP filtreleme implementasyonu
+    // TODO: IP filtering implementation
 }
 
 /**
- * @brief Akışı kaydet
+ * @brief Record the stream
  */
 bool RTSPStreamer::recordStream(bool enable, const std::string& filename) {
     if (enable && !is_recording_) {
-        // TODO: Kayıt implementasyonu
+        // TODO: Recording implementation
         record_filename_ = filename;
         is_recording_ = true;
         
-        std::cout << "[RTSPStreamer] Kayıt başlatıldı: " << filename << std::endl;
+        std::cout << "[RTSPStreamer] Recording started: " << filename << std::endl;
         return true;
     } else if (!enable && is_recording_) {
-        // TODO: Kaydı durdur
+        // TODO: Stop recording
         is_recording_ = false;
         
-        std::cout << "[RTSPStreamer] Kayıt durduruldu." << std::endl;
+        std::cout << "[RTSPStreamer] Recording stopped." << std::endl;
         return true;
     }
     
@@ -278,51 +278,51 @@ bool RTSPStreamer::recordStream(bool enable, const std::string& filename) {
 }
 
 /**
- * @brief Anlık görüntü al
+ * @brief Take a snapshot
  */
 bool RTSPStreamer::takeSnapshot(const std::string& filename) {
     // TODO: Snapshot implementasyonu
-    std::cout << "[RTSPStreamer] Snapshot alındı: " << filename << std::endl;
+    std::cout << "[RTSPStreamer] Snapshot taken: " << filename << std::endl;
     return true;
 }
 
 /**
- * @brief RTSP server'ı oluşturur
+ * @brief Creates the RTSP server
  */
 bool RTSPStreamer::createServer() {
-    // RTSP server oluştur
+    // Create RTSP server
     server_ = gst_rtsp_server_new();
     if (!server_) {
         return false;
     }
     
-    // Server özelliklerini ayarla
+    // Set server properties
     g_object_set(server_, 
         "address", config_.address.c_str(),
         "service", std::to_string(config_.port).c_str(),
         "backlog", config_.max_clients,
         nullptr);
     
-    // Mount points al
+    // Get mount points
     mounts_ = gst_rtsp_server_get_mount_points(server_);
     
-    // Media factory oluştur
+    // Create media factory
     factory_ = createMediaFactory();
     if (!factory_) {
         return false;
     }
     
-    // Factory'yi mount point'e ekle
+    // Add factory to mount point
     gst_rtsp_mount_points_add_factory(mounts_, 
                                       config_.mount_point.c_str(), 
                                       factory_);
     
-    // Güvenlik ayarlarını uygula
+    // Apply security settings
     if (config_.security != SecurityType::NONE) {
         applySecurity();
     }
     
-    // Multicast ayarları
+    // Multicast settings
     if (config_.enable_multicast) {
         address_pool_ = gst_rtsp_address_pool_new();
         gst_rtsp_address_pool_add_range(address_pool_,
@@ -335,37 +335,37 @@ bool RTSPStreamer::createServer() {
         gst_rtsp_media_factory_set_address_pool(factory_, address_pool_);
     }
     
-    // İstemci bağlantı sinyallerini bağla
+    // Connect client connection signals
     g_signal_connect(server_, "client-connected",
                      G_CALLBACK(onClientConnected), this);
                      
-    // Server'ı attach et
+    // Attach server
     gst_rtsp_server_attach(server_, nullptr);
     
     return true;
 }
 
 /**
- * @brief Media factory oluşturur
+ * @brief Creates the media factory
  */
 GstRTSPMediaFactory* RTSPStreamer::createMediaFactory() {
     GstRTSPMediaFactory* factory = gst_rtsp_media_factory_new();
     
-    // Pipeline string'ini oluştur
+    // Build pipeline string
     std::string pipeline = buildPipelineString();
     
-    // Factory ayarları
+    // Factory settings
     gst_rtsp_media_factory_set_launch(factory, pipeline.c_str());
     gst_rtsp_media_factory_set_shared(factory, TRUE);
     gst_rtsp_media_factory_set_latency(factory, config_.latency);
     gst_rtsp_media_factory_set_buffer_size(factory, config_.buffer_size);
     
-    // RTCP ayarları
+    // RTCP settings
     if (config_.enable_rtcp) {
         gst_rtsp_media_factory_set_enable_rtcp(factory, TRUE);
     }
     
-    // Media configure sinyalini bağla
+    // Connect media configure signal
     g_signal_connect(factory, "media-configure",
                      G_CALLBACK(onMediaConfigure), this);
     
@@ -373,17 +373,17 @@ GstRTSPMediaFactory* RTSPStreamer::createMediaFactory() {
 }
 
 /**
- * @brief Pipeline string'i oluşturur
+ * @brief Builds the pipeline string
  */
 std::string RTSPStreamer::buildPipelineString() {
     std::stringstream pipeline;
     
-    // Video kısmı
+    // Video part
     if (video_source_) {
-        // AppSrc'den video al
+        // Get video from AppSrc
         pipeline << "appsrc name=videosrc ! ";
     } else {
-        // Test pattern kullan
+        // Use test pattern
         pipeline << "videotestsrc is-live=true ! ";
     }
     
@@ -414,7 +414,7 @@ std::string RTSPStreamer::buildPipelineString() {
         pipeline << "h264parse ! rtph264pay name=pay0 pt=96 ";
     }
     
-    // Ses kısmı (eğer etkinse)
+    // Audio part (if enabled)
     if (config_.enable_audio) {
         pipeline << " ";
         
@@ -424,11 +424,11 @@ std::string RTSPStreamer::buildPipelineString() {
             pipeline << "audiotestsrc is-live=true ! ";
         }
         
-        // Ses caps
+        // Audio caps
         pipeline << "audio/x-raw,rate=" << config_.audio_samplerate
                  << ",channels=" << config_.audio_channels << " ! ";
         
-        // Ses encoder
+        // Audio encoder
         if (config_.audio_encoder == "opus") {
             pipeline << "opusenc bitrate=" << config_.audio_bitrate << " ! ";
             pipeline << "rtpopuspay name=pay1 pt=97";
@@ -442,19 +442,19 @@ std::string RTSPStreamer::buildPipelineString() {
 }
 
 /**
- * @brief Güvenlik ayarlarını uygular
+ * @brief Applies security settings
  */
 void RTSPStreamer::applySecurity() {
     if (!server_ || config_.security == SecurityType::NONE) {
         return;
     }
     
-    // Auth nesnesi oluştur
+    // Create auth object
     if (!auth_) {
         auth_ = gst_rtsp_auth_new();
     }
     
-    // Token oluştur
+    // Create token
     if (token_) {
         gst_rtsp_token_unref(token_);
     }
@@ -462,7 +462,7 @@ void RTSPStreamer::applySecurity() {
     if (config_.security == SecurityType::BASIC_AUTH || 
         config_.security == SecurityType::DIGEST_AUTH) {
         
-        // Kullanıcı ekle
+        // Add user
         GstRTSPToken* basic_token = gst_rtsp_token_new(
             GST_RTSP_TOKEN_MEDIA_FACTORY_ROLE, G_TYPE_STRING, "user",
             nullptr);
@@ -474,7 +474,7 @@ void RTSPStreamer::applySecurity() {
         
         gst_rtsp_token_unref(basic_token);
         
-        // Digest auth için
+        // For digest auth
         if (config_.security == SecurityType::DIGEST_AUTH) {
             gst_rtsp_auth_add_digest(auth_,
                                     config_.username.c_str(),
@@ -483,7 +483,7 @@ void RTSPStreamer::applySecurity() {
         }
     }
     
-    // Anonim erişim için token
+    // Token for anonymous access
     GstRTSPToken* anon_token = gst_rtsp_token_new(
         GST_RTSP_TOKEN_MEDIA_FACTORY_ROLE, G_TYPE_STRING, 
         config_.security == SecurityType::NONE ? "user" : "anonymous",
@@ -492,65 +492,65 @@ void RTSPStreamer::applySecurity() {
     gst_rtsp_auth_set_default_token(auth_, anon_token);
     gst_rtsp_token_unref(anon_token);
     
-    // Auth'u server'a ekle
+    // Add auth to server
     gst_rtsp_server_set_auth(server_, auth_);
 }
 
 /**
- * @brief İstemci bağlandı callback'i
+ * @brief Client connected callback
  */
 void RTSPStreamer::onClientConnected(GstRTSPServer* server,
                                     GstRTSPClient* client,
                                     gpointer user_data) {
     RTSPStreamer* streamer = static_cast<RTSPStreamer*>(user_data);
     
-    // İstemci bilgisi oluştur
+    // Create client info
     ClientInfo info = streamer->createClientInfo(client);
     
-    // İstemci listesine ekle
+    // Add to client list
     {
         std::lock_guard<std::mutex> lock(streamer->clients_mutex_);
         streamer->clients_[info.id] = info;
     }
     
-    // İstatistikleri güncelle
+    // Update statistics
     {
         std::lock_guard<std::mutex> lock(streamer->stats_mutex_);
         streamer->stats_.active_clients++;
         streamer->stats_.total_connections++;
     }
     
-    // Callback'i çağır
+    // Call callback
     if (streamer->client_callback_) {
         streamer->client_callback_(info, true);
     }
     
-    // İstemci kopma sinyalini bağla
+    // Connect client disconnect signal
     g_signal_connect(client, "closed",
                      G_CALLBACK(onClientDisconnected), streamer);
     
-    std::cout << "[RTSPStreamer] İstemci bağlandı: " 
+    std::cout << "[RTSPStreamer] Client connected: " 
               << info.address << ":" << info.port << std::endl;
 }
 
 /**
- * @brief İstemci ayrıldı callback'i
+ * @brief Client disconnected callback
  */
 void RTSPStreamer::onClientDisconnected(GstRTSPServer* server,
                                        GstRTSPClient* client,
                                        gpointer user_data) {
     RTSPStreamer* streamer = static_cast<RTSPStreamer*>(user_data);
     
-    // İstemci bilgisini bul ve kaldır
+    // Find and remove client info
     ClientInfo info;
     bool found = false;
     
     {
         std::lock_guard<std::mutex> lock(streamer->clients_mutex_);
         
-        // İstemciyi bul
+        // Find client
         for (auto it = streamer->clients_.begin(); it != streamer->clients_.end(); ++it) {
-            // TODO: GstRTSPClient pointer'ını karşılaştır
+            // TODO: Compare GstRTSPClient pointer
             if (true) { // Placeholder
                 info = it->second;
                 streamer->clients_.erase(it);
@@ -561,66 +561,66 @@ void RTSPStreamer::onClientDisconnected(GstRTSPServer* server,
     }
     
     if (found) {
-        // İstatistikleri güncelle
+        // Update statistics
         {
             std::lock_guard<std::mutex> lock(streamer->stats_mutex_);
             streamer->stats_.active_clients--;
         }
         
-        // Callback'i çağır
+        // Call callback
         if (streamer->client_callback_) {
             streamer->client_callback_(info, false);
         }
         
-        std::cout << "[RTSPStreamer] İstemci ayrıldı: " 
+        std::cout << "[RTSPStreamer] Client disconnected: " 
                   << info.address << ":" << info.port << std::endl;
     }
 }
 
 /**
- * @brief Media yapılandırma callback'i
+ * @brief Media configuration callback
  */
 void RTSPStreamer::onMediaConfigure(GstRTSPMediaFactory* factory,
                                    GstRTSPMedia* media,
                                    gpointer user_data) {
     RTSPStreamer* streamer = static_cast<RTSPStreamer*>(user_data);
     
-    // Media durumu değişiklik sinyalini bağla
+    // Connect media state change signal
     g_signal_connect(media, "new-state",
                      G_CALLBACK(onMediaStateChanged), streamer);
     
-    // Pipeline'ı al
+    // Get pipeline
     GstElement* pipeline = gst_rtsp_media_get_element(media);
     
-    // Video source varsa bağla
+    // Connect video source if available
     if (streamer->video_source_) {
         GstElement* videosrc = gst_bin_get_by_name(GST_BIN(pipeline), "videosrc");
         if (videosrc) {
-            // AppSrc ayarları
+            // AppSrc settings
             g_object_set(videosrc,
                 "stream-type", GST_APP_STREAM_TYPE_STREAM,
                 "format", GST_FORMAT_TIME,
                 "is-live", TRUE,
                 nullptr);
             
-            // TODO: AppSrc'ye veri besleme mekanizması
+            // TODO: Data feeding mechanism for AppSrc
             
             gst_object_unref(videosrc);
         }
     }
     
-    // Ses source varsa bağla
+    // Connect audio source if available
     if (streamer->audio_source_) {
         GstElement* audiosrc = gst_bin_get_by_name(GST_BIN(pipeline), "audiosrc");
         if (audiosrc) {
-            // AppSrc ayarları
+            // AppSrc settings
             g_object_set(audiosrc,
                 "stream-type", GST_APP_STREAM_TYPE_STREAM,
                 "format", GST_FORMAT_TIME,
                 "is-live", TRUE,
                 nullptr);
             
-            // TODO: AppSrc'ye veri besleme mekanizması
+            // TODO: Data feeding mechanism for AppSrc
             
             gst_object_unref(audiosrc);
         }
@@ -630,7 +630,7 @@ void RTSPStreamer::onMediaConfigure(GstRTSPMediaFactory* factory,
 }
 
 /**
- * @brief Stream durumu değişti callback'i
+ * @brief Stream state changed callback
  */
 void RTSPStreamer::onMediaStateChanged(GstRTSPMedia* media,
                                       GstState state,
@@ -638,23 +638,23 @@ void RTSPStreamer::onMediaStateChanged(GstRTSPMedia* media,
     RTSPStreamer* streamer = static_cast<RTSPStreamer*>(user_data);
     
     const char* state_name = gst_element_state_get_name(state);
-    std::cout << "[RTSPStreamer] Media durumu değişti: " << state_name << std::endl;
+    std::cout << "[RTSPStreamer] Media state changed: " << state_name << std::endl;
     
-    // İstatistikleri güncelle
+    // Update statistics
     if (state == GST_STATE_PLAYING) {
-        // Yayın başladı
+        // Streaming started
     } else if (state == GST_STATE_NULL) {
-        // Yayın durdu
+        // Streaming stopped
     }
 }
 
 /**
- * @brief İstemci bilgisi oluştur
+ * @brief Create client info
  */
 ClientInfo RTSPStreamer::createClientInfo(GstRTSPClient* client) {
     ClientInfo info;
     
-    // Bağlantı bilgilerini al
+    // Get connection info
     GstRTSPConnection* conn = gst_rtsp_client_get_connection(client);
     if (conn) {
         // IP adresini al
@@ -667,47 +667,47 @@ ClientInfo RTSPStreamer::createClientInfo(GstRTSPClient* client) {
         info.port = url ? url->port : 0;
     }
     
-    // Benzersiz ID oluştur
+    // Create unique ID
     static int client_counter = 0;
     info.id = "client_" + std::to_string(++client_counter);
     
-    // Bağlantı zamanı
+    // Connection time
     info.connect_time = std::chrono::steady_clock::now();
     
     return info;
 }
 
 /**
- * @brief Server ana döngüsü
+ * @brief Server main loop
  */
 void RTSPStreamer::serverMainLoop() {
-    // GMainLoop oluştur
+    // Create GMainLoop
     main_loop_ = g_main_loop_new(nullptr, FALSE);
     
-    // İstatistik güncelleme timer'ı
+    // Statistics update timer
     g_timeout_add(1000, [](gpointer data) -> gboolean {
         RTSPStreamer* streamer = static_cast<RTSPStreamer*>(data);
         streamer->updateStats();
         return TRUE;
     }, this);
     
-    // Ana döngüyü çalıştır
+    // Run main loop
     g_main_loop_run(main_loop_);
     
-    // Temizlik
+    // Cleanup
     g_main_loop_unref(main_loop_);
     main_loop_ = nullptr;
 }
 
 /**
- * @brief İstatistikleri güncelle
+ * @brief Update statistics
  */
 void RTSPStreamer::updateStats() {
     std::lock_guard<std::mutex> lock(stats_mutex_);
     
-    // Aktif istemci sayısı zaten güncel
-    
-    // Bant genişliği hesaplama
+    // Active client count is already up to date
+
+    // Bandwidth calculation
     double total_bandwidth = 0;
     int active_count = 0;
     
@@ -716,8 +716,8 @@ void RTSPStreamer::updateStats() {
         for (auto& pair : clients_) {
             ClientInfo& client = pair.second;
             
-            // TODO: Gerçek bant genişliği ölçümü
-            // Şimdilik tahmini değer kullan
+            // TODO: Real bandwidth measurement
+            // Use estimated value for now
             if (client.is_playing) {
                 client.bandwidth = config_.bitrate / 1000000.0; // Mbps
                 total_bandwidth += client.bandwidth;
@@ -726,17 +726,17 @@ void RTSPStreamer::updateStats() {
         }
     }
     
-    // Ortalama bant genişliği
+    // Average bandwidth
     if (active_count > 0) {
         stats_.average_bandwidth = total_bandwidth / active_count;
     } else {
         stats_.average_bandwidth = 0;
     }
     
-    // Debug çıktısı
+    // Debug output
     if (stats_.active_clients > 0) {
-        std::cout << "[RTSPStreamer] Aktif istemciler: " << stats_.active_clients
-                  << ", Toplam bant genişliği: " << std::fixed << std::setprecision(2)
+        std::cout << "[RTSPStreamer] Active clients: " << stats_.active_clients
+                  << ", Total bandwidth: " << std::fixed << std::setprecision(2)
                   << total_bandwidth << " Mbps" << std::endl;
     }
 }

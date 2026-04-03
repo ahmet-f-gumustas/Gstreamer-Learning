@@ -1,9 +1,9 @@
 /**
  * @file main.cpp
- * @brief GStreamer Video Analytics Pipeline ana programı
- * 
- * Bu dosya, uygulamanın giriş noktasını içerir ve komut satırı
- * argümanlarını işleyerek pipeline'ı başlatır.
+ * @brief GStreamer Video Analytics Pipeline main program
+ *
+ * This file contains the application entry point and starts
+ * the pipeline by processing command-line arguments.
  */
 
 #include <iostream>
@@ -22,68 +22,68 @@
 #include "motion_detector.h"
 #include "rtsp_streamer.h"
 
-// Global pipeline yöneticisi (sinyal işleyici için)
+// Global pipeline manager (for signal handler)
 std::unique_ptr<PipelineManager> g_pipeline_manager;
 
 /**
- * @brief Sinyal işleyici (SIGINT, SIGTERM)
- * @param signum Sinyal numarası
+ * @brief Signal handler (SIGINT, SIGTERM)
+ * @param signum Signal number
  */
 void signalHandler(int signum) {
-    std::cout << "\n[INFO] Sinyal alındı (" << signum << "), kapatılıyor..." << std::endl;
+    std::cout << "\n[INFO] Signal received (" << signum << "), shutting down..." << std::endl;
     
     if (g_pipeline_manager && g_pipeline_manager->isRunning()) {
         g_pipeline_manager->stop();
     }
     
-    // Çıkış
+    // Exit
     std::exit(0);
 }
 
 /**
- * @brief Kullanım bilgisini gösterir
- * @param program_name Program adı
+ * @brief Displays usage information
+ * @param program_name Program name
  */
 void showUsage(const std::string& program_name) {
-    std::cout << "Kullanım: " << program_name << " [SEÇENEKLER]\n\n"
-              << "Seçenekler:\n"
-              << "  -i, --input <kaynak>      Video kaynağı (dosya/webcam/rtsp://...)\n"
-              << "  -o, --output <hedef>      Çıkış hedefi (display/file/rtsp://...)\n"
-              << "  -c, --config <dosya>      Yapılandırma dosyası (YAML)\n"
-              << "  --motion-detect           Hareket algılamayı etkinleştir\n"
-              << "  --use-gpu                 GPU hızlandırma kullan\n"
-              << "  --record <dosya>          Video kaydı yap\n"
-              << "  --width <genişlik>        Video genişliği (varsayılan: 1920)\n"
-              << "  --height <yükseklik>      Video yüksekliği (varsayılan: 1080)\n"
-              << "  --fps <fps>               Kare hızı (varsayılan: 30)\n"
-              << "  --bitrate <bitrate>       Bit hızı (varsayılan: 4000000)\n"
-              << "  --rtsp-port <port>        RTSP server portu (varsayılan: 8554)\n"
-              << "  -v, --verbose             Ayrıntılı çıktı\n"
-              << "  -h, --help                Bu yardım mesajını göster\n\n"
-              << "Örnekler:\n"
-              << "  # Video dosyası işleme\n"
+    std::cout << "Usage: " << program_name << " [OPTIONS]\n\n"
+              << "Options:\n"
+              << "  -i, --input <source>      Video source (file/webcam/rtsp://...)\n"
+              << "  -o, --output <target>     Output target (display/file/rtsp://...)\n"
+              << "  -c, --config <file>       Configuration file (YAML)\n"
+              << "  --motion-detect           Enable motion detection\n"
+              << "  --use-gpu                 Use GPU acceleration\n"
+              << "  --record <file>           Record video\n"
+              << "  --width <width>           Video width (default: 1920)\n"
+              << "  --height <height>         Video height (default: 1080)\n"
+              << "  --fps <fps>               Frame rate (default: 30)\n"
+              << "  --bitrate <bitrate>       Bit rate (default: 4000000)\n"
+              << "  --rtsp-port <port>        RTSP server port (default: 8554)\n"
+              << "  -v, --verbose             Verbose output\n"
+              << "  -h, --help                Show this help message\n\n"
+              << "Examples:\n"
+              << "  # Process a video file\n"
               << "  " << program_name << " -i video.mp4\n\n"
-              << "  # Web kamerası ile hareket algılama\n"
+              << "  # Motion detection with webcam\n"
               << "  " << program_name << " -i webcam --motion-detect\n\n"
-              << "  # RTSP stream işleme ve yayınlama\n"
+              << "  # Process and stream via RTSP\n"
               << "  " << program_name << " -i rtsp://192.168.1.100:554/stream -o rtsp://0.0.0.0:8554/live\n\n"
-              << "  # GPU ile video işleme ve kayıt\n"
+              << "  # GPU video processing and recording\n"
               << "  " << program_name << " -i video.mp4 --use-gpu --record output.mp4\n"
               << std::endl;
 }
 
 /**
- * @brief Komut satırı argümanlarını parse eder
- * @param argc Argüman sayısı
- * @param argv Argüman dizisi
- * @param config Pipeline yapılandırması
- * @return Başarılı ise true
+ * @brief Parses command-line arguments
+ * @param argc Argument count
+ * @param argv Argument array
+ * @param config Pipeline configuration
+ * @return true if successful
  */
 bool parseArguments(int argc, char* argv[], PipelineConfig& config) {
     bool verbose = false;
     std::string config_file;
     
-    // Argümanları işle
+    // Process arguments
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         
@@ -97,7 +97,7 @@ bool parseArguments(int argc, char* argv[], PipelineConfig& config) {
         else if ((arg == "-i" || arg == "--input") && i + 1 < argc) {
             std::string input = argv[++i];
             
-            // Giriş türünü belirle
+            // Determine input type
             if (input == "webcam") {
                 config.source_type = SourceType::WEBCAM;
                 config.source_location = "/dev/video0";
@@ -118,7 +118,7 @@ bool parseArguments(int argc, char* argv[], PipelineConfig& config) {
         else if ((arg == "-o" || arg == "--output") && i + 1 < argc) {
             std::string output = argv[++i];
             
-            // Çıkış türünü belirle
+            // Determine output type
             if (output == "display") {
                 config.sink_type = SinkType::DISPLAY;
             }
@@ -160,22 +160,22 @@ bool parseArguments(int argc, char* argv[], PipelineConfig& config) {
             config.rtsp_port = std::stoi(argv[++i]);
         }
         else {
-            std::cerr << "[HATA] Bilinmeyen argüman: " << arg << std::endl;
+            std::cerr << "[ERROR] Unknown argument: " << arg << std::endl;
             showUsage(argv[0]);
             return false;
         }
     }
     
-    // Config dosyası varsa yükle
+    // Load config file if provided
     if (!config_file.empty()) {
         try {
             YAML::Node yaml_config = YAML::LoadFile(config_file);
             
-            // Pipeline ayarları
+            // Pipeline settings
             if (yaml_config["pipeline"]) {
                 auto pipeline = yaml_config["pipeline"];
                 
-                // Giriş ayarları
+                // Input settings
                 if (pipeline["input"]) {
                     auto input = pipeline["input"];
                     std::string type = input["type"].as<std::string>();
@@ -188,14 +188,14 @@ bool parseArguments(int argc, char* argv[], PipelineConfig& config) {
                     config.source_location = input["location"].as<std::string>();
                 }
                 
-                // İşleme ayarları
+                // Processing settings
                 if (pipeline["processing"]) {
                     auto processing = pipeline["processing"];
                     config.enable_motion_detection = processing["motion_detection"].as<bool>(false);
                     config.enable_gpu_acceleration = processing["gpu_acceleration"].as<bool>(false);
                 }
                 
-                // Çıkış ayarları
+                // Output settings
                 if (pipeline["output"]) {
                     auto output = pipeline["output"];
                     std::string type = output["type"].as<std::string>();
@@ -209,33 +209,33 @@ bool parseArguments(int argc, char* argv[], PipelineConfig& config) {
             }
         }
         catch (const YAML::Exception& e) {
-            std::cerr << "[HATA] Config dosyası okunamadı: " << e.what() << std::endl;
+            std::cerr << "[ERROR] Failed to read config file: " << e.what() << std::endl;
             return false;
         }
     }
     
-    // Varsayılan değerler
+    // Default values
     if (config.source_location.empty()) {
-        std::cerr << "[HATA] Video kaynağı belirtilmedi!" << std::endl;
+        std::cerr << "[ERROR] No video source specified!" << std::endl;
         showUsage(argv[0]);
         return false;
     }
     
-    // Debug çıktısı
+    // Debug output
     if (verbose) {
-        std::cout << "\n[CONFIG] Pipeline Yapılandırması:" << std::endl;
-        std::cout << "  Kaynak: " << config.source_location << std::endl;
-        std::cout << "  Çözünürlük: " << config.width << "x" << config.height << "@" << config.framerate << "fps" << std::endl;
-        std::cout << "  Bit hızı: " << config.bitrate << " bps" << std::endl;
-        std::cout << "  GPU Hızlandırma: " << (config.enable_gpu_acceleration ? "Evet" : "Hayır") << std::endl;
-        std::cout << "  Hareket Algılama: " << (config.enable_motion_detection ? "Evet" : "Hayır") << std::endl;
-        
+        std::cout << "\n[CONFIG] Pipeline Configuration:" << std::endl;
+        std::cout << "  Source: " << config.source_location << std::endl;
+        std::cout << "  Resolution: " << config.width << "x" << config.height << "@" << config.framerate << "fps" << std::endl;
+        std::cout << "  Bitrate: " << config.bitrate << " bps" << std::endl;
+        std::cout << "  GPU Acceleration: " << (config.enable_gpu_acceleration ? "Yes" : "No") << std::endl;
+        std::cout << "  Motion Detection: " << (config.enable_motion_detection ? "Yes" : "No") << std::endl;
+
         if (config.sink_type == SinkType::RTSP) {
-            std::cout << "  RTSP Çıkış: " << config.sink_location << std::endl;
+            std::cout << "  RTSP Output: " << config.sink_location << std::endl;
         }
-        
+
         if (config.enable_recording) {
-            std::cout << "  Kayıt: " << config.record_location << std::endl;
+            std::cout << "  Recording: " << config.record_location << std::endl;
         }
         
         std::cout << std::endl;
@@ -245,115 +245,115 @@ bool parseArguments(int argc, char* argv[], PipelineConfig& config) {
 }
 
 /**
- * @brief Performans bilgilerini gösterir
- * @param pipeline Pipeline yöneticisi
+ * @brief Displays performance information
+ * @param pipeline Pipeline manager
  */
 void showPerformanceInfo(PipelineManager* pipeline) {
-    // Terminal temizle ve başlık yaz
+    // Clear terminal and write header
     std::cout << "\033[2J\033[H"; // Clear screen
     std::cout << "=== GStreamer Video Analytics Pipeline ===" << std::endl;
-    std::cout << "Çıkmak için Ctrl+C" << std::endl;
+    std::cout << "Press Ctrl+C to exit" << std::endl;
     std::cout << std::string(42, '-') << std::endl;
     
-    // FPS bilgisi
+    // FPS info
     std::cout << "FPS: " << std::fixed << std::setprecision(2) 
               << pipeline->getCurrentFPS() << std::endl;
     
-    // Video işleme istatistikleri
+    // Video processing statistics
     if (auto* processor = pipeline->getVideoProcessor()) {
         auto stats = processor->getStats();
-        std::cout << "İşlenen Kareler: " << stats.frames_processed << std::endl;
-        std::cout << "Ortalama İşleme Süresi: " << stats.avg_processing_time << " ms" << std::endl;
+        std::cout << "Processed Frames: " << stats.frames_processed << std::endl;
+        std::cout << "Average Processing Time: " << stats.avg_processing_time << " ms" << std::endl;
     }
     
-    // Hareket algılama istatistikleri
+    // Motion detection statistics
     if (auto* detector = pipeline->getMotionDetector()) {
         auto stats = detector->getStats();
-        std::cout << "\nHareket Algılama:" << std::endl;
-        std::cout << "  Hareket Kareleri: " << stats.motion_frames 
+        std::cout << "\nMotion Detection:" << std::endl;
+        std::cout << "  Motion Frames: " << stats.motion_frames
                   << " / " << stats.total_frames << std::endl;
-        std::cout << "  Ortalama Hareket Alanı: " << std::fixed << std::setprecision(2)
+        std::cout << "  Average Motion Area: " << std::fixed << std::setprecision(2)
                   << stats.average_motion_area << "%" << std::endl;
         
-        // Aktif hareket bölgeleri
+        // Active motion regions
         auto motions = detector->getCurrentMotions();
         if (!motions.empty()) {
-            std::cout << "  Aktif Bölgeler: " << motions.size() << std::endl;
+            std::cout << "  Active Regions: " << motions.size() << std::endl;
         }
     }
     
-    // RTSP server istatistikleri
+    // RTSP server statistics
     if (auto* streamer = pipeline->getRTSPStreamer()) {
         auto stats = streamer->getStats();
         std::cout << "\nRTSP Server:" << std::endl;
         std::cout << "  URL: " << streamer->getStreamURL() << std::endl;
-        std::cout << "  Aktif İstemciler: " << stats.active_clients << std::endl;
-        std::cout << "  Toplam Bant Genişliği: " << std::fixed << std::setprecision(2)
+        std::cout << "  Active Clients: " << stats.active_clients << std::endl;
+        std::cout << "  Total Bandwidth: " << std::fixed << std::setprecision(2)
                   << stats.average_bandwidth << " Mbps" << std::endl;
     }
 }
 
 /**
- * @brief Ana fonksiyon
+ * @brief Main function
  */
 int main(int argc, char* argv[]) {
-    // GStreamer'ı başlat
+    // Initialize GStreamer
     gst_init(&argc, &argv);
     
-    // Sinyal işleyicileri kur
+    // Set up signal handlers
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
     
-    // Başlangıç mesajı
+    // Startup message
     std::cout << "GStreamer Video Analytics Pipeline v1.0.0" << std::endl;
     std::cout << "GStreamer " << gst_version_string() << std::endl;
     std::cout << std::string(42, '-') << std::endl;
     
-    // Yapılandırmayı oku
+    // Read configuration
     PipelineConfig config;
     if (!parseArguments(argc, argv, config)) {
         return 1;
     }
     
     try {
-        // Pipeline yöneticisini oluştur
+        // Create pipeline manager
         g_pipeline_manager = std::make_unique<PipelineManager>(config);
         
-        // Hata callback'i ayarla
+        // Set error callback
         g_pipeline_manager->setErrorCallback([](const std::string& error) {
-            std::cerr << "\n[HATA] " << error << std::endl;
+            std::cerr << "\n[ERROR] " << error << std::endl;
         });
-        
-        // EOS callback'i ayarla
+
+        // Set EOS callback
         g_pipeline_manager->setEOSCallback([]() {
-            std::cout << "\n[INFO] Video sonu algılandı." << std::endl;
+            std::cout << "\n[INFO] End of video detected." << std::endl;
             g_pipeline_manager->stop();
         });
         
-        // Hareket algılama callback'i
+        // Motion detection callback
         if (config.enable_motion_detection && g_pipeline_manager->getMotionDetector()) {
             g_pipeline_manager->getMotionDetector()->setMotionEventCallback(
                 [](const std::vector<MotionRegion>& regions, guint64 timestamp, double percentage) {
-                    if (percentage > 5.0) { // %5'ten fazla hareket
-                        std::cout << "\n[HAREKET] " << regions.size() 
-                                  << " bölgede hareket algılandı ("
+                    if (percentage > 5.0) { // More than 5% motion
+                        std::cout << "\n[MOTION] " << regions.size()
+                                  << " region(s) with motion detected ("
                                   << std::fixed << std::setprecision(1) << percentage 
-                                  << "% alan)" << std::endl;
+                                  << "% area)" << std::endl;
                     }
                 }
             );
         }
         
-        // Pipeline'ı başlat
-        std::cout << "[INFO] Pipeline başlatılıyor..." << std::endl;
+        // Start the pipeline
+        std::cout << "[INFO] Starting pipeline..." << std::endl;
         if (!g_pipeline_manager->start()) {
-            std::cerr << "[HATA] Pipeline başlatılamadı!" << std::endl;
+            std::cerr << "[ERROR] Failed to start pipeline!" << std::endl;
             return 1;
         }
         
-        std::cout << "[INFO] Pipeline başarıyla başlatıldı." << std::endl;
-        
-        // Ana döngü - performans bilgilerini göster
+        std::cout << "[INFO] Pipeline started successfully." << std::endl;
+
+        // Main loop - display performance information
         while (g_pipeline_manager->isRunning()) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
             showPerformanceInfo(g_pipeline_manager.get());
@@ -361,12 +361,12 @@ int main(int argc, char* argv[]) {
         
     }
     catch (const std::exception& e) {
-        std::cerr << "[HATA] İstisna: " << e.what() << std::endl;
+        std::cerr << "[ERROR] Exception: " << e.what() << std::endl;
         return 1;
     }
     
-    // Temizlik
-    std::cout << "\n[INFO] Program sonlandırılıyor..." << std::endl;
+    // Cleanup
+    std::cout << "\n[INFO] Program terminating..." << std::endl;
     g_pipeline_manager.reset();
     
     return 0;

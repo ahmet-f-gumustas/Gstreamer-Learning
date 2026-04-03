@@ -16,7 +16,7 @@ private:
 
 public:
     VideoConverter() : pipeline(nullptr), loop(nullptr) {
-        // GStreamer'ı başlat
+        // Initialize GStreamer
         gst_init(nullptr, nullptr);
         loop = g_main_loop_new(nullptr, FALSE);
     }
@@ -27,28 +27,28 @@ public:
 
     bool createPipeline(const std::string& inputFile, const std::string& outputFile, 
                        const std::string& outputFormat = "mp4") {
-        // Pipeline oluştur
+        // Create pipeline
         pipeline = gst_pipeline_new("video-converter");
         if (!pipeline) {
-            std::cerr << "Pipeline oluşturulamadı!" << std::endl;
+            std::cerr << "Failed to create pipeline!" << std::endl;
             return false;
         }
 
-        // Elementleri oluştur
+        // Create elements
         source = gst_element_factory_make("filesrc", "source");
         decoder = gst_element_factory_make("decodebin", "decoder");
         converter = gst_element_factory_make("videoconvert", "converter");
         
-        // Çıkış formatına göre encoder seç
+        // Select encoder based on output format
         if (outputFormat == "mp4" || outputFormat == "h264") {
 #ifdef HAS_CUDA
-            // CUDA encoder'ı dene, başarısız olursa CPU encoder'a geç
+            // Try CUDA encoder, fall back to CPU encoder if it fails
             encoder = gst_element_factory_make("nvh264enc", "encoder");
             if (!encoder) {
-                std::cout << "NVIDIA encoder bulunamadı, CPU encoder kullanılıyor..." << std::endl;
+                std::cout << "NVIDIA encoder not found, using CPU encoder..." << std::endl;
                 encoder = gst_element_factory_make("x264enc", "encoder");
             } else {
-                std::cout << "NVIDIA H.264 encoder kullanılıyor..." << std::endl;
+                std::cout << "Using NVIDIA H.264 encoder..." << std::endl;
             }
 #else
             encoder = gst_element_factory_make("x264enc", "encoder");
@@ -58,31 +58,31 @@ public:
         } else if (outputFormat == "avi") {
             encoder = gst_element_factory_make("xvid", "encoder");
         } else {
-            encoder = gst_element_factory_make("x264enc", "encoder"); // varsayılan
+            encoder = gst_element_factory_make("x264enc", "encoder"); // default
         }
         
         sink = gst_element_factory_make("filesink", "sink");
 
-        // Elementlerin oluşturulup oluşturulmadığını kontrol et
+        // Check if all elements were created successfully
         if (!source || !decoder || !converter || !encoder || !sink) {
-            std::cerr << "Bir veya daha fazla element oluşturulamadı!" << std::endl;
+            std::cerr << "One or more elements could not be created!" << std::endl;
             return false;
         }
 
-        // Dosya yollarını ayarla
+        // Set file paths
         g_object_set(source, "location", inputFile.c_str(), nullptr);
         g_object_set(sink, "location", outputFile.c_str(), nullptr);
 
-        // Encoder ayarları (kalite ve performans için)
+        // Encoder settings (for quality and performance)
         if (outputFormat == "mp4" || outputFormat == "h264") {
 #ifdef HAS_CUDA
-            // NVIDIA encoder ayarları
+            // NVIDIA encoder settings
             if (g_str_has_prefix(GST_ELEMENT_NAME(encoder), "nvh264enc")) {
                 g_object_set(encoder, "bitrate", 2000, nullptr); // 2Mbps
                 g_object_set(encoder, "preset", 2, nullptr); // medium preset
                 g_object_set(encoder, "rc-mode", 1, nullptr); // CBR mode
             } else {
-                // x264 encoder ayarları
+                // x264 encoder settings
                 g_object_set(encoder, "bitrate", 2000, nullptr); // 2Mbps
                 g_object_set(encoder, "speed-preset", 6, nullptr); // medium preset
             }
@@ -92,21 +92,21 @@ public:
 #endif
         }
 
-        // Elementleri pipeline'a ekle
+        // Add elements to the pipeline
         gst_bin_add_many(GST_BIN(pipeline), source, decoder, converter, encoder, sink, nullptr);
 
-        // Static elementleri bağla (decoder hariç, o dinamik)
+        // Link static elements (except decoder, which is dynamic)
         if (!gst_element_link(source, decoder)) {
-            std::cerr << "Source ve decoder bağlanamadı!" << std::endl;
+            std::cerr << "Failed to link source and decoder!" << std::endl;
             return false;
         }
 
         if (!gst_element_link_many(converter, encoder, sink, nullptr)) {
-            std::cerr << "Converter, encoder ve sink bağlanamadı!" << std::endl;
+            std::cerr << "Failed to link converter, encoder and sink!" << std::endl;
             return false;
         }
 
-        // Decoder için dinamik pad bağlantısı
+        // Dynamic pad connection for decoder
         g_signal_connect(decoder, "pad-added", G_CALLBACK(on_pad_added), converter);
 
         return true;
@@ -116,24 +116,24 @@ public:
         GstElement *converter = GST_ELEMENT(data);
         GstPad *sink_pad = gst_element_get_static_pad(converter, "sink");
         
-        // Pad zaten bağlıysa çık
+        // Exit if pad is already linked
         if (gst_pad_is_linked(sink_pad)) {
             gst_object_unref(sink_pad);
             return;
         }
 
-        // Pad'in video olup olmadığını kontrol et
+        // Check if the pad is video
         GstCaps *new_pad_caps = gst_pad_get_current_caps(new_pad);
         GstStructure *new_pad_struct = gst_caps_get_structure(new_pad_caps, 0);
         const gchar *new_pad_type = gst_structure_get_name(new_pad_struct);
 
         if (g_str_has_prefix(new_pad_type, "video/x-raw")) {
-            // Video pad'ini bağla
+            // Link video pad
             GstPadLinkReturn ret = gst_pad_link(new_pad, sink_pad);
             if (GST_PAD_LINK_FAILED(ret)) {
-                std::cerr << "Video pad bağlanamadı!" << std::endl;
+                std::cerr << "Failed to link video pad!" << std::endl;
             } else {
-                std::cout << "Video pad başarıyla bağlandı!" << std::endl;
+                std::cout << "Video pad linked successfully!" << std::endl;
             }
         }
 
@@ -147,7 +147,7 @@ public:
 
         switch (GST_MESSAGE_TYPE(msg)) {
             case GST_MESSAGE_EOS:
-                std::cout << "Dönüştürme tamamlandı!" << std::endl;
+                std::cout << "Conversion completed!" << std::endl;
                 g_main_loop_quit(loop);
                 break;
             
@@ -155,7 +155,7 @@ public:
                 gchar *debug;
                 GError *error;
                 gst_message_parse_error(msg, &error, &debug);
-                std::cerr << "Hata: " << error->message << std::endl;
+                std::cerr << "Error: " << error->message << std::endl;
                 if (debug) {
                     std::cerr << "Debug: " << debug << std::endl;
                     g_free(debug);
@@ -169,7 +169,7 @@ public:
                 if (GST_MESSAGE_SRC(msg) == GST_OBJECT(data)) {
                     GstState old_state, new_state, pending_state;
                     gst_message_parse_state_changed(msg, &old_state, &new_state, &pending_state);
-                    std::cout << "Pipeline durumu: " << gst_element_state_get_name(old_state) 
+                    std::cout << "Pipeline state: " << gst_element_state_get_name(old_state)
                              << " -> " << gst_element_state_get_name(new_state) << std::endl;
                 }
                 break;
@@ -183,24 +183,24 @@ public:
 
     bool convert() {
         if (!pipeline) {
-            std::cerr << "Pipeline oluşturulmamış!" << std::endl;
+            std::cerr << "Pipeline has not been created!" << std::endl;
             return false;
         }
 
-        // Bus ayarla
+        // Set up bus
         bus = gst_element_get_bus(pipeline);
         gst_bus_add_watch(bus, bus_call, loop);
 
-        // Pipeline'ı başlat
-        std::cout << "Video dönüştürme başlıyor..." << std::endl;
+        // Start the pipeline
+        std::cout << "Starting video conversion..." << std::endl;
         GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
         
         if (ret == GST_STATE_CHANGE_FAILURE) {
-            std::cerr << "Pipeline başlatılamadı!" << std::endl;
+            std::cerr << "Failed to start pipeline!" << std::endl;
             return false;
         }
 
-        // Ana döngüyü başlat
+        // Start the main loop
         g_main_loop_run(loop);
 
         return true;
@@ -232,7 +232,7 @@ public:
             
             if (total > 0) {
                 double progress = (double)current / total * 100.0;
-                std::cout << "İlerleme: " << std::fixed << std::setprecision(1) 
+                std::cout << "Progress: " << std::fixed << std::setprecision(1)
                          << progress << "%" << std::endl;
             }
         }
@@ -240,9 +240,9 @@ public:
 };
 
 void printUsage(const char* programName) {
-    std::cout << "Kullanım: " << programName << " <giriş_dosyası> <çıkış_dosyası> [format]" << std::endl;
-    std::cout << "Formatlar: mp4 (varsayılan), webm, avi" << std::endl;
-    std::cout << "Örnek: " << programName << " input.mov output.mp4" << std::endl;
+    std::cout << "Usage: " << programName << " <input_file> <output_file> [format]" << std::endl;
+    std::cout << "Formats: mp4 (default), webm, avi" << std::endl;
+    std::cout << "Example: " << programName << " input.mov output.mp4" << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -256,23 +256,23 @@ int main(int argc, char *argv[]) {
     std::string format = (argc > 3) ? argv[3] : "mp4";
 
     std::cout << "=== GStreamer Video Converter ===" << std::endl;
-    std::cout << "Giriş dosyası: " << inputFile << std::endl;
-    std::cout << "Çıkış dosyası: " << outputFile << std::endl;
+    std::cout << "Input file: " << inputFile << std::endl;
+    std::cout << "Output file: " << outputFile << std::endl;
     std::cout << "Format: " << format << std::endl;
     std::cout << "=================================" << std::endl;
 
     VideoConverter converter;
     
     if (!converter.createPipeline(inputFile, outputFile, format)) {
-        std::cerr << "Pipeline oluşturulamadı!" << std::endl;
+        std::cerr << "Failed to create pipeline!" << std::endl;
         return -1;
     }
 
     if (!converter.convert()) {
-        std::cerr << "Dönüştürme başarısız!" << std::endl;
+        std::cerr << "Conversion failed!" << std::endl;
         return -1;
     }
 
-    std::cout << "Dönüştürme başarıyla tamamlandı!" << std::endl;
+    std::cout << "Conversion completed successfully!" << std::endl;
     return 0;
 }

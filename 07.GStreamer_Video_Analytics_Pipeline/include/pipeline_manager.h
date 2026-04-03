@@ -1,10 +1,10 @@
 /**
  * @file pipeline_manager.h
- * @brief GStreamer pipeline yönetimi için ana sınıf
- * 
- * Bu sınıf, GStreamer pipeline'ının oluşturulması, yapılandırılması ve
- * yönetilmesinden sorumludur. Video giriş/çıkış kaynaklarını, işleme
- * elemanlarını ve akış kontrolünü yönetir.
+ * @brief Main class for GStreamer pipeline management
+ *
+ * This class is responsible for creating, configuring, and managing
+ * the GStreamer pipeline. It manages video input/output sources,
+ * processing elements, and stream control.
  */
 
 #ifndef PIPELINE_MANAGER_H
@@ -26,168 +26,168 @@ class MotionDetector;
 class RTSPStreamer;
 
 /**
- * @brief Video kaynağı türlerini tanımlar
+ * @brief Defines video source types
  */
 enum class SourceType {
-    FILE,        // Video dosyası
-    WEBCAM,      // USB/V4L2 kamera
+    FILE,        // Video file
+    WEBCAM,      // USB/V4L2 camera
     RTSP,        // RTSP stream
     HTTP,        // HTTP stream
-    APPSRC       // Uygulama kaynağı
+    APPSRC       // Application source
 };
 
 /**
- * @brief Çıkış hedef türlerini tanımlar
+ * @brief Defines output target types
  */
 enum class SinkType {
-    DISPLAY,     // Ekrana görüntüleme
-    FILE,        // Dosyaya kayıt
+    DISPLAY,     // Display on screen
+    FILE,        // Record to file
     RTSP,        // RTSP server
-    APPSINK      // Uygulama havuzu
+    APPSINK      // Application sink
 };
 
 /**
- * @brief Pipeline yapılandırma parametreleri
+ * @brief Pipeline configuration parameters
  */
 struct PipelineConfig {
-    // Giriş parametreleri
+    // Input parameters
     SourceType source_type = SourceType::FILE;
     std::string source_location = "";
-    
-    // Video parametreleri
+
+    // Video parameters
     int width = 1920;
     int height = 1080;
     int framerate = 30;
     std::string video_format = "I420";
-    
-    // Çıkış parametreleri
+
+    // Output parameters
     SinkType sink_type = SinkType::DISPLAY;
     std::string sink_location = "";
-    
-    // İşleme seçenekleri
+
+    // Processing options
     bool enable_motion_detection = false;
     bool enable_gpu_acceleration = false;
     bool enable_recording = false;
     std::string record_location = "";
-    
-    // Codec ayarları
+
+    // Codec settings
     std::string encoder = "x264enc";
     int bitrate = 4000000; // 4 Mbps
-    
-    // RTSP server ayarları
+
+    // RTSP server settings
     std::string rtsp_mount_point = "/live";
     int rtsp_port = 8554;
 };
 
 /**
- * @brief GStreamer pipeline yönetici sınıfı
+ * @brief GStreamer pipeline manager class
  */
 class PipelineManager {
 public:
     /**
      * @brief Constructor
-     * @param config Pipeline yapılandırma parametreleri
+     * @param config Pipeline configuration parameters
      */
     explicit PipelineManager(const PipelineConfig& config);
-    
+
     /**
-     * @brief Destructor - Kaynakları temizler
+     * @brief Destructor - Cleans up resources
      */
     ~PipelineManager();
-    
-    // Kopya ve taşıma işlemlerini devre dışı bırak
+
+    // Disable copy and move operations
     PipelineManager(const PipelineManager&) = delete;
     PipelineManager& operator=(const PipelineManager&) = delete;
-    
+
     /**
-     * @brief Pipeline'ı başlatır
-     * @return Başarılı ise true
+     * @brief Starts the pipeline
+     * @return true if successful
      */
     bool start();
-    
+
     /**
-     * @brief Pipeline'ı durdurur
+     * @brief Stops the pipeline
      */
     void stop();
-    
+
     /**
-     * @brief Pipeline'ın çalışıp çalışmadığını kontrol eder
-     * @return Çalışıyor ise true
+     * @brief Checks if the pipeline is running
+     * @return true if running
      */
     bool isRunning() const { return is_running_.load(); }
-    
+
     /**
-     * @brief Mevcut FPS değerini döndürür
-     * @return Saniyedeki kare sayısı
+     * @brief Returns the current FPS value
+     * @return Frames per second
      */
     double getCurrentFPS() const { return current_fps_; }
-    
+
     /**
-     * @brief Video işleyici nesnesini döndürür
-     * @return VideoProcessor pointer'ı
+     * @brief Returns the video processor object
+     * @return VideoProcessor pointer
      */
     VideoProcessor* getVideoProcessor() { return video_processor_.get(); }
-    
+
     /**
-     * @brief Hareket algılayıcı nesnesini döndürür
-     * @return MotionDetector pointer'ı
+     * @brief Returns the motion detector object
+     * @return MotionDetector pointer
      */
     MotionDetector* getMotionDetector() { return motion_detector_.get(); }
-    
+
     /**
-     * @brief RTSP yayıncı nesnesini döndürür
-     * @return RTSPStreamer pointer'ı
+     * @brief Returns the RTSP streamer object
+     * @return RTSPStreamer pointer
      */
     RTSPStreamer* getRTSPStreamer() { return rtsp_streamer_.get(); }
-    
+
     /**
-     * @brief Pipeline'a yeni bir element ekler
-     * @param element Eklenecek GStreamer elementi
-     * @param name Element adı
-     * @return Başarılı ise true
+     * @brief Adds a new element to the pipeline
+     * @param element GStreamer element to add
+     * @param name Element name
+     * @return true if successful
      */
     bool addElement(GstElement* element, const std::string& name);
-    
+
     /**
-     * @brief Pipeline'dan bir elementi kaldırır
-     * @param name Kaldırılacak element adı
-     * @return Başarılı ise true
+     * @brief Removes an element from the pipeline
+     * @param name Name of element to remove
+     * @return true if successful
      */
     bool removeElement(const std::string& name);
-    
+
     /**
-     * @brief Çalışma zamanında video kaynağını değiştirir
-     * @param new_source Yeni kaynak konumu
-     * @param type Yeni kaynak türü
-     * @return Başarılı ise true
+     * @brief Changes the video source at runtime
+     * @param new_source New source location
+     * @param type New source type
+     * @return true if successful
      */
     bool changeSource(const std::string& new_source, SourceType type);
-    
+
     /**
-     * @brief Kayıt işlemini başlatır/durdurur
-     * @param start true ise başlat, false ise durdur
-     * @param filename Kayıt dosya adı
-     * @return Başarılı ise true
+     * @brief Starts/stops recording
+     * @param start true to start, false to stop
+     * @param filename Recording file name
+     * @return true if successful
      */
     bool toggleRecording(bool start, const std::string& filename = "");
-    
+
     /**
-     * @brief Pipeline durumunu döndürür
-     * @return GStreamer durum enum'u
+     * @brief Returns the pipeline state
+     * @return GStreamer state enum
      */
     GstState getState() const;
-    
+
     /**
-     * @brief Hata callback'i ayarlar
-     * @param callback Hata durumunda çağrılacak fonksiyon
+     * @brief Sets the error callback
+     * @param callback Function to call on error
      */
     void setErrorCallback(std::function<void(const std::string&)> callback) {
         error_callback_ = callback;
     }
-    
+
     /**
-     * @brief EOS (End of Stream) callback'i ayarlar
-     * @param callback Stream bittiğinde çağrılacak fonksiyon
+     * @brief Sets the EOS (End of Stream) callback
+     * @param callback Function to call when stream ends
      */
     void setEOSCallback(std::function<void()> callback) {
         eos_callback_ = callback;
@@ -195,92 +195,92 @@ public:
 
 private:
     /**
-     * @brief Pipeline'ı oluşturur
-     * @return Başarılı ise true
+     * @brief Creates the pipeline
+     * @return true if successful
      */
     bool createPipeline();
-    
+
     /**
-     * @brief Video kaynağını oluşturur
-     * @return Oluşturulan kaynak elementi
+     * @brief Creates the video source
+     * @return Created source element
      */
     GstElement* createSource();
-    
+
     /**
-     * @brief Video havuzunu oluşturur
-     * @return Oluşturulan havuz elementi
+     * @brief Creates the video sink
+     * @return Created sink element
      */
     GstElement* createSink();
-    
+
     /**
-     * @brief Video kodlayıcısını oluşturur
-     * @return Oluşturulan kodlayıcı elementi
+     * @brief Creates the video encoder
+     * @return Created encoder element
      */
     GstElement* createEncoder();
-    
+
     /**
-     * @brief Bus mesajlarını işler
+     * @brief Handles bus messages
      * @param bus GStreamer bus
-     * @param msg Mesaj
-     * @param user_data Kullanıcı verisi (this pointer)
-     * @return TRUE devam et, FALSE dur
+     * @param msg Message
+     * @param user_data User data (this pointer)
+     * @return TRUE to continue, FALSE to stop
      */
     static gboolean busCallback(GstBus* bus, GstMessage* msg, gpointer user_data);
-    
+
     /**
-     * @brief Pad-added sinyalini işler
-     * @param src Kaynak element
-     * @param new_pad Yeni pad
-     * @param data Kullanıcı verisi
+     * @brief Handles pad-added signal
+     * @param src Source element
+     * @param new_pad New pad
+     * @param data User data
      */
     static void onPadAdded(GstElement* src, GstPad* new_pad, gpointer data);
-    
+
     /**
-     * @brief Ana event loop thread fonksiyonu
+     * @brief Main event loop thread function
      */
     void mainLoopThread();
-    
+
     /**
-     * @brief FPS hesaplama fonksiyonu
+     * @brief FPS calculation function
      */
     void calculateFPS();
-    
+
     /**
-     * @brief Pipeline'ı temizler
+     * @brief Cleans up the pipeline
      */
     void cleanup();
-    
-    // Üye değişkenler
-    PipelineConfig config_;                                    // Pipeline yapılandırması
-    
-    // GStreamer elementleri
-    GstElement* pipeline_ = nullptr;                           // Ana pipeline
-    GstElement* source_ = nullptr;                             // Video kaynağı
-    GstElement* sink_ = nullptr;                               // Video havuzu
-    GstElement* tee_ = nullptr;                                // Akışı bölmek için
-    std::map<std::string, GstElement*> elements_;             // Tüm elementler
-    
-    // Yardımcı sınıflar
-    std::unique_ptr<VideoProcessor> video_processor_;          // Video işleyici
-    std::unique_ptr<MotionDetector> motion_detector_;          // Hareket algılayıcı
-    std::unique_ptr<RTSPStreamer> rtsp_streamer_;             // RTSP yayıncı
-    
-    // Thread ve senkronizasyon
-    std::unique_ptr<std::thread> main_loop_thread_;           // Ana döngü thread'i
-    GMainLoop* main_loop_ = nullptr;                          // GLib ana döngüsü
-    std::atomic<bool> is_running_{false};                      // Çalışma durumu
-    
-    // Performans metrikleri
-    double current_fps_ = 0.0;                                 // Mevcut FPS
-    guint64 frame_count_ = 0;                                 // Toplam kare sayısı
-    GstClockTime last_fps_time_ = 0;                          // Son FPS hesaplama zamanı
-    
-    // Callback fonksiyonları
-    std::function<void(const std::string&)> error_callback_;   // Hata callback'i
-    std::function<void()> eos_callback_;                       // EOS callback'i
-    
-    // Kayıt için ek elementler
-    GstElement* recording_queue_ = nullptr;                    // Kayıt kuyruğu
-    GstElement* recording_sink_ = nullptr;                     // Kayıt havuzu
-    bool is_recording_ = false;                                // Kayıt durumu
+
+    // Member variables
+    PipelineConfig config_;                                    // Pipeline configuration
+
+    // GStreamer elements
+    GstElement* pipeline_ = nullptr;                           // Main pipeline
+    GstElement* source_ = nullptr;                             // Video source
+    GstElement* sink_ = nullptr;                               // Video sink
+    GstElement* tee_ = nullptr;                                // For splitting the stream
+    std::map<std::string, GstElement*> elements_;             // All elements
+
+    // Helper classes
+    std::unique_ptr<VideoProcessor> video_processor_;          // Video processor
+    std::unique_ptr<MotionDetector> motion_detector_;          // Motion detector
+    std::unique_ptr<RTSPStreamer> rtsp_streamer_;             // RTSP streamer
+
+    // Thread and synchronization
+    std::unique_ptr<std::thread> main_loop_thread_;           // Main loop thread
+    GMainLoop* main_loop_ = nullptr;                          // GLib main loop
+    std::atomic<bool> is_running_{false};                      // Running state
+
+    // Performance metrics
+    double current_fps_ = 0.0;                                 // Current FPS
+    guint64 frame_count_ = 0;                                 // Total frame count
+    GstClockTime last_fps_time_ = 0;                          // Last FPS calculation time
+
+    // Callback functions
+    std::function<void(const std::string&)> error_callback_;   // Error callback
+    std::function<void()> eos_callback_;                       // EOS callback
+
+    // Additional elements for recording
+    GstElement* recording_queue_ = nullptr;                    // Recording queue
+    GstElement* recording_sink_ = nullptr;                     // Recording sink
+    bool is_recording_ = false;                                // Recording state
 };

@@ -39,12 +39,12 @@ bool StereoPipeline::initialize(SourceMode mode,
     return true;
 }
 
-// ─── Simulation: tek kaynak → tee → iki appsink ──────────────────────────────
+// ─── Simulation: single source → tee → two appsinks ─────────────────────────
 bool StereoPipeline::setupSimulation()
 {
-    // Ball pattern (18) canlı kaynak; tee ile iki kola ayırıyoruz.
-    // Sağ kol tamamen aynı görüntüyü alır; "stereo farkı" DepthEstimator
-    // tarafından yapay kayma (shift) ile oluşturulur.
+    // Ball pattern (18) live source; we split into two branches via tee.
+    // The right branch receives the exact same image; the "stereo difference"
+    // is created by DepthEstimator via artificial shift.
     std::string desc =
         "videotestsrc pattern=18 is-live=true "
         "! video/x-raw,width=" + std::to_string(width_) +
@@ -63,18 +63,18 @@ bool StereoPipeline::setupSimulation()
     GError* err = nullptr;
     pipeline_ = gst_parse_launch(desc.c_str(), &err);
     if (err) {
-        std::cerr << "[Pipeline] Simülasyon hatası: " << err->message << "\n";
+        std::cerr << "[Pipeline] Simulation error: " << err->message << "\n";
         g_error_free(err);
         return false;
     }
 
     leftAppsink_  = gst_bin_get_by_name(GST_BIN(pipeline_), "left_sink");
     rightAppsink_ = gst_bin_get_by_name(GST_BIN(pipeline_), "right_sink");
-    std::cout << "[Pipeline] Simülasyon modu hazır (" << width_ << "x" << height_ << ")\n";
+    std::cout << "[Pipeline] Simulation mode ready (" << width_ << "x" << height_ << ")\n";
     return true;
 }
 
-// ─── Dual webcam: iki v4l2src ─────────────────────────────────────────────────
+// ─── Dual webcam: two v4l2src ─────────────────────────────────────────────────
 bool StereoPipeline::setupDualWebcam(const std::string& leftDev,
                                      const std::string& rightDev)
 {
@@ -83,11 +83,11 @@ bool StereoPipeline::setupDualWebcam(const std::string& leftDev,
         ",height=" + std::to_string(height_);
 
     std::string desc =
-        // Sol kamera
+        // Left camera
         "v4l2src device=" + leftDev +
         " ! videoconvert ! videoscale ! " + caps +
         " ! appsink name=left_sink  emit-signals=true sync=false max-buffers=1 drop=true "
-        // Sağ kamera
+        // Right camera
         "v4l2src device=" + rightDev +
         " ! videoconvert ! videoscale ! " + caps +
         " ! appsink name=right_sink emit-signals=true sync=false max-buffers=1 drop=true";
@@ -95,26 +95,26 @@ bool StereoPipeline::setupDualWebcam(const std::string& leftDev,
     GError* err = nullptr;
     pipeline_ = gst_parse_launch(desc.c_str(), &err);
     if (err) {
-        std::cerr << "[Pipeline] Webcam hatası: " << err->message << "\n";
+        std::cerr << "[Pipeline] Webcam error: " << err->message << "\n";
         g_error_free(err);
         return false;
     }
 
     leftAppsink_  = gst_bin_get_by_name(GST_BIN(pipeline_), "left_sink");
     rightAppsink_ = gst_bin_get_by_name(GST_BIN(pipeline_), "right_sink");
-    std::cout << "[Pipeline] Çift webcam modu hazır (" << leftDev << " | " << rightDev << ")\n";
+    std::cout << "[Pipeline] Dual webcam mode ready (" << leftDev << " | " << rightDev << ")\n";
     return true;
 }
 
-// ─── Video dosyası: filesrc → decodebin → tee → iki appsink ──────────────────
+// ─── Video file: filesrc → decodebin → tee → two appsinks ───────────────────
 bool StereoPipeline::setupVideoFile(const std::string& filepath)
 {
     std::string caps =
         "video/x-raw,format=BGR,width=" + std::to_string(width_) +
         ",height=" + std::to_string(height_);
 
-    // uridecodebin yerine parsebin kullansaydık daha hızlı olurdu;
-    // ancak decodebin daha evrenseldir.
+    // Using parsebin instead of uridecodebin would be faster;
+    // however decodebin is more universal.
     std::string desc =
         "filesrc location=\"" + filepath + "\" "
         "! decodebin "
@@ -129,18 +129,18 @@ bool StereoPipeline::setupVideoFile(const std::string& filepath)
     GError* err = nullptr;
     pipeline_ = gst_parse_launch(desc.c_str(), &err);
     if (err) {
-        std::cerr << "[Pipeline] Dosya hatası: " << err->message << "\n";
+        std::cerr << "[Pipeline] File error: " << err->message << "\n";
         g_error_free(err);
         return false;
     }
 
     leftAppsink_  = gst_bin_get_by_name(GST_BIN(pipeline_), "left_sink");
     rightAppsink_ = gst_bin_get_by_name(GST_BIN(pipeline_), "right_sink");
-    std::cout << "[Pipeline] Video dosyası modu hazır: " << filepath << "\n";
+    std::cout << "[Pipeline] Video file mode ready: " << filepath << "\n";
     return true;
 }
 
-// ─── appsink callback bağlama ─────────────────────────────────────────────────
+// ─── appsink callback binding ─────────────────────────────────────────────────
 void StereoPipeline::bindAppsinks()
 {
     g_signal_connect(leftAppsink_,  "new-sample", G_CALLBACK(onLeftSample),  this);
@@ -152,11 +152,11 @@ void StereoPipeline::start()
 {
     GstStateChangeReturn ret = gst_element_set_state(pipeline_, GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE) {
-        std::cerr << "[Pipeline] PLAYING durumuna geçilemedi!\n";
+        std::cerr << "[Pipeline] Could not transition to PLAYING state!\n";
         return;
     }
     running_ = true;
-    std::cout << "[Pipeline] Başlatıldı.\n";
+    std::cout << "[Pipeline] Started.\n";
 }
 
 void StereoPipeline::stop()
@@ -171,7 +171,7 @@ void StereoPipeline::stop()
         gst_object_unref(bus_);
         bus_ = nullptr;
     }
-    // appsink referansları pipeline unref ile zaten serbest kalır
+    // appsink references are already freed by pipeline unref
     leftAppsink_  = nullptr;
     rightAppsink_ = nullptr;
 }
@@ -207,7 +207,7 @@ bool StereoPipeline::getFrame(StereoFrame& out, int timeoutMs)
     return false;
 }
 
-// ─── GStreamer örnek → cv::Mat ────────────────────────────────────────────────
+// ─── GStreamer sample → cv::Mat ───────────────────────────────────────────────
 cv::Mat StereoPipeline::sampleToMat(GstSample* sample)
 {
     GstCaps*      caps   = gst_sample_get_caps(sample);
@@ -221,13 +221,13 @@ cv::Mat StereoPipeline::sampleToMat(GstSample* sample)
     GstMapInfo map;
     gst_buffer_map(buffer, &map, GST_MAP_READ);
     cv::Mat frame(h, w, CV_8UC3, map.data);
-    cv::Mat result = frame.clone();   // pipeline buffer'dan bağımsız kopya
+    cv::Mat result = frame.clone();   // independent copy from pipeline buffer
     gst_buffer_unmap(buffer, &map);
 
     return result;
 }
 
-// ─── Static callback'ler ──────────────────────────────────────────────────────
+// ─── Static callbacks ────────────────────────────────────────────────────────
 GstFlowReturn StereoPipeline::onLeftSample(GstAppSink* sink, gpointer data)
 {
     auto* self   = static_cast<StereoPipeline*>(data);
@@ -239,7 +239,7 @@ GstFlowReturn StereoPipeline::onLeftSample(GstAppSink* sink, gpointer data)
     gst_sample_unref(s);
 
     std::lock_guard<std::mutex> lk(self->leftMtx_);
-    // Kuyruk doluysa eskiyi at
+    // Drop oldest if queue is full
     if (self->leftQ_.size() >= 3) self->leftQ_.pop();
     self->leftQ_.push({frame, ts});
 

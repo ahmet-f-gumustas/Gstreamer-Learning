@@ -1,61 +1,61 @@
 # GStreamer Video Converter
 
-RTX 4070 ve CUDA 12.4 desteği ile basit video dönüştürücü.
+Simple video converter with RTX 4070 and CUDA 12.4 support.
 
-## Hızlı Başlangıç
+## Quick Start
 
 ```bash
-# 1. Build script'i çalıştırılabilir yapın
+# 1. Make the build script executable
 chmod +x build.sh
 
-# 2. Bağımlılıkları yükleyin
+# 2. Install dependencies
 ./build.sh deps
 
-# 3. Projeyi derleyin
+# 3. Build the project
 ./build.sh
 
-# 4. Test edin
+# 4. Test
 ./build.sh test
 ```
 
-## Kullanım
+## Usage
 
 ```bash
-# MP4'e dönüştür (GPU hızlandırmalı)
+# Convert to MP4 (GPU accelerated)
 ./build/bin/video_converter input.mov output.mp4
 
-# WebM'e dönüştür
+# Convert to WebM
 ./build/bin/video_converter input.mp4 output.webm webm
 
-# AVI'ye dönüştür
+# Convert to AVI
 ./build/bin/video_converter input.mkv output.avi avi
 ```
 
-## Build Komutları
+## Build Commands
 
 ```bash
 ./build.sh          # Normal build
-./build.sh deps     # Bağımlılık kurulumu
-./build.sh check    # Sistem kontrolü
+./build.sh deps     # Install dependencies
+./build.sh check    # System check
 ./build.sh test     # Build + test
-./build.sh clean    # Temizlik
+./build.sh clean    # Clean
 ```
 
-## Özellikler
+## Features
 
-- **CUDA Desteği**: RTX 4070 ile GPU hızlandırma
-- **Çoklu Format**: MP4, WebM, AVI
-- **Basit Kullanım**: Tek komutla dönüştürme
-- **Modern C++17**: CMake build sistemi
+- **CUDA Support**: GPU acceleration with RTX 4070
+- **Multiple Formats**: MP4, WebM, AVI
+- **Simple Usage**: Convert with a single command
+- **Modern C++17**: CMake build system
 
-## Sistem Gereksinimleri
+## System Requirements
 
 - Ubuntu 22.04
 - CMake 3.16+
 - GCC 11.4+
 - GStreamer 1.0+
-- CUDA 12.4 (isteğe bağlı)
+- CUDA 12.4 (optional)
 
 ---
 
-**Not**: CUDA bulunamazsa otomatik olarak CPU encoder kullanılır.
+**Note**: If CUDA is not found, CPU encoder is used automatically.

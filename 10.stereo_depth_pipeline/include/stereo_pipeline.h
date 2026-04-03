@@ -10,7 +10,7 @@
 #include <string>
 #include <utility>
 
-// ─── Veri yapısı ─────────────────────────────────────────────────────────────
+// ─── Data structure ──────────────────────────────────────────────────────────
 struct StereoFrame {
     cv::Mat        left;
     cv::Mat        right;
@@ -20,10 +20,10 @@ struct StereoFrame {
 
 // ─── StereoPipeline ───────────────────────────────────────────────────────────
 //
-// Üç kaynak modu destekler:
-//   SIMULATION  – tek videotestsrc, tee ile iki appsink'e dağıtılır
-//   DUAL_WEBCAM – iki v4l2src (iki USB kamera)
-//   VIDEO_FILE  – bir video dosyası, tee ile iki appsink'e dağıtılır
+// Supports three source modes:
+//   SIMULATION  – single videotestsrc, distributed to two appsinks via tee
+//   DUAL_WEBCAM – two v4l2src (two USB cameras)
+//   VIDEO_FILE  – a video file, distributed to two appsinks via tee
 //
 class StereoPipeline {
 public:
@@ -46,8 +46,8 @@ public:
     void stop();
     bool isRunning() const { return running_; }
 
-    // En güncel stereo çiftini döner; timeout_ms içinde yeni frame gelmezse
-    // valid=false döner.
+    // Returns the most recent stereo pair; returns valid=false if no new
+    // frame arrives within timeout_ms.
     bool getFrame(StereoFrame& out, int timeoutMs = 200);
 
 private:
@@ -63,18 +63,18 @@ private:
     int width_  = 640;
     int height_ = 480;
 
-    // Pipeline kurulum fonksiyonları
+    // Pipeline setup functions
     bool setupSimulation();
     bool setupDualWebcam(const std::string& leftDev, const std::string& rightDev);
     bool setupVideoFile(const std::string& filepath);
 
-    // Ortak appsink konfigürasyonu
+    // Common appsink configuration
     void bindAppsinks();
 
-    // GStreamer örnek → cv::Mat dönüşümü
+    // GStreamer sample → cv::Mat conversion
     cv::Mat sampleToMat(GstSample* sample);
 
-    // appsink "new-sample" callback'leri
+    // appsink "new-sample" callbacks
     static GstFlowReturn onLeftSample (GstAppSink* sink, gpointer data);
     static GstFlowReturn onRightSample(GstAppSink* sink, gpointer data);
 };

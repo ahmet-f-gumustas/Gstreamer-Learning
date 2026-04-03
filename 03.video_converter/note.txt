@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# GStreamer Video Converter projesi oluşturma
+# Create GStreamer Video Converter project
 mkdir -p 03.video_converter/{src,include,build,test_videos}
 
-# Proje dosyalarını oluştur
-echo "Video Converter projesi oluşturuluyor..."
+# Create project files
+echo "Creating Video Converter project..."
 
 # CMakeLists.txt
 cat > 03.video_converter/CMakeLists.txt << 'EOF'
@@ -13,7 +13,7 @@ project(video-converter)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# GStreamer paketlerini bul
+# Find GStreamer packages
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
 pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
@@ -29,14 +29,14 @@ set(SOURCES
     src/Logger.cpp
 )
 
-# Executable oluştur
+# Create executable
 add_executable(video-converter ${SOURCES})
 
 # Link libraries
 target_link_libraries(video-converter ${GSTREAMER_LIBRARIES})
 EOF
 
-# Header dosyaları
+# Header files
 cat > 03.video_converter/include/VideoConverter.hpp << 'EOF'
 #ifndef VIDEO_CONVERTER_HPP
 #define VIDEO_CONVERTER_HPP
@@ -118,7 +118,7 @@ private:
 #endif // LOGGER_HPP
 EOF
 
-# Source dosyaları
+# Source files
 cat > 03.video_converter/src/main.cpp << 'EOF'
 #include "VideoConverter.hpp"
 #include "Logger.hpp"
@@ -126,9 +126,9 @@ cat > 03.video_converter/src/main.cpp << 'EOF'
 #include <string>
 
 void printUsage(const std::string& programName) {
-    std::cout << "Kullanım: " << programName << " <input_video> <output_video> <format>\n";
-    std::cout << "Formatlar: mp4, avi, mkv, webm\n";
-    std::cout << "Örnek: " << programName << " input.avi output.mp4 mp4\n";
+    std::cout << "Usage: " << programName << " <input_video> <output_video> <format>\n";
+    std::cout << "Formats: mp4, avi, mkv, webm\n";
+    std::cout << "Example: " << programName << " input.avi output.mp4 mp4\n";
 }
 
 VideoConverter::Format stringToFormat(const std::string& formatStr) {
@@ -137,7 +137,7 @@ VideoConverter::Format stringToFormat(const std::string& formatStr) {
     if (formatStr == "mkv") return VideoConverter::Format::MKV;
     if (formatStr == "webm") return VideoConverter::Format::WEBM;
     
-    throw std::invalid_argument("Geçersiz format: " + formatStr);
+    throw std::invalid_argument("Invalid format: " + formatStr);
 }
 
 int main(int argc, char* argv[]) {
@@ -150,36 +150,36 @@ int main(int argc, char* argv[]) {
     std::string outputPath = argv[2];
     std::string formatStr = argv[3];
 
-    Logger::info("GStreamer Video Converter başlatılıyor...");
+    Logger::info("Starting GStreamer Video Converter...");
 
     try {
         VideoConverter converter;
         
         if (!converter.initialize()) {
-            Logger::error("Video converter başlatılamadı!");
+            Logger::error("Failed to initialize video converter!");
             return 1;
         }
 
-        // Progress callback ayarla
+        // Set up progress callback
         converter.setProgressCallback([](double progress) {
-            std::cout << "\rDönüştürme: " << std::fixed << std::setprecision(1) 
+            std::cout << "\rConverting: " << std::fixed << std::setprecision(1)
                      << progress << "%" << std::flush;
         });
 
         VideoConverter::Format outputFormat = stringToFormat(formatStr);
         
-        Logger::info("Dönüştürme başlıyor: " + inputPath + " -> " + outputPath);
+        Logger::info("Starting conversion: " + inputPath + " -> " + outputPath);
         
         if (converter.convert(inputPath, outputPath, outputFormat)) {
             std::cout << "\n";
-            Logger::info("Dönüştürme başarıyla tamamlandı!");
+            Logger::info("Conversion completed successfully!");
         } else {
-            Logger::error("Dönüştürme başarısız!");
+            Logger::error("Conversion failed!");
             return 1;
         }
 
     } catch (const std::exception& e) {
-        Logger::error("Hata: " + std::string(e.what()));
+        Logger::error("Error: " + std::string(e.what()));
         return 1;
     }
 
@@ -204,7 +204,7 @@ VideoConverter::~VideoConverter() {
 
 bool VideoConverter::initialize() {
     gst_init(nullptr, nullptr);
-    Logger::info("GStreamer başarıyla başlatıldı");
+    Logger::info("GStreamer initialized successfully");
     return true;
 }
 
@@ -212,7 +212,7 @@ bool VideoConverter::convert(const std::string& inputPath,
                            const std::string& outputPath, 
                            Format outputFormat) {
     
-    // Pipeline oluştur
+    // Create pipeline
     pipeline = gst_pipeline_new("video-converter-pipeline");
     source = gst_element_factory_make("filesrc", "source");
     decoder = gst_element_factory_make("decodebin", "decoder");
@@ -226,29 +226,29 @@ bool VideoConverter::convert(const std::string& inputPath,
     sink = gst_element_factory_make("filesink", "sink");
 
     if (!pipeline || !source || !decoder || !converter || !encoder || !muxer || !sink) {
-        Logger::error("Pipeline elementleri oluşturulamadı!");
+        Logger::error("Failed to create pipeline elements!");
         return false;
     }
 
-    // Özellikleri ayarla
+    // Set properties
     g_object_set(G_OBJECT(source), "location", inputPath.c_str(), nullptr);
     g_object_set(G_OBJECT(sink), "location", outputPath.c_str(), nullptr);
 
-    // Elementleri pipeline'a ekle
+    // Add elements to the pipeline
     gst_bin_add_many(GST_BIN(pipeline), source, decoder, converter, encoder, muxer, sink, nullptr);
 
-    // Statik linkleri oluştur
+    // Create static links
     if (!gst_element_link(source, decoder)) {
-        Logger::error("Source-decoder bağlantısı başarısız!");
+        Logger::error("Source-decoder link failed!");
         return false;
     }
 
     if (!gst_element_link_many(converter, encoder, muxer, sink, nullptr)) {
-        Logger::error("Converter-encoder-muxer-sink bağlantısı başarısız!");
+        Logger::error("Converter-encoder-muxer-sink link failed!");
         return false;
     }
 
-    // Decoder'ın pad-added sinyalini dinle
+    // Listen for decoder's pad-added signal
     g_signal_connect(decoder, "pad-added", G_CALLBACK(+[](GstElement* src, GstPad* new_pad, gpointer data) {
         VideoConverter* self = static_cast<VideoConverter*>(data);
         
@@ -256,29 +256,29 @@ bool VideoConverter::convert(const std::string& inputPath,
         GstPadLinkReturn ret = gst_pad_link(new_pad, sink_pad);
         
         if (GST_PAD_LINK_FAILED(ret)) {
-            Logger::error("Decoder-converter pad bağlantısı başarısız!");
+            Logger::error("Decoder-converter pad link failed!");
         } else {
-            Logger::debug("Decoder-converter pad bağlantısı başarılı");
+            Logger::debug("Decoder-converter pad link successful");
         }
         
         gst_object_unref(sink_pad);
     }), this);
 
-    // Bus mesajlarını dinle
+    // Listen for bus messages
     GstBus* bus = gst_element_get_bus(pipeline);
     gst_bus_add_watch(bus, busCallback, this);
     gst_object_unref(bus);
 
-    // Pipeline'ı başlat
-    Logger::info("Pipeline başlatılıyor...");
+    // Start the pipeline
+    Logger::info("Starting pipeline...");
     GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
     
     if (ret == GST_STATE_CHANGE_FAILURE) {
-        Logger::error("Pipeline başlatılamadı!");
+        Logger::error("Failed to start pipeline!");
         return false;
     }
 
-    // Ana döngü
+    // Main loop
     GMainLoop* loop = g_main_loop_new(nullptr, FALSE);
     g_main_loop_run(loop);
     g_main_loop_unref(loop);
@@ -299,9 +299,9 @@ void VideoConverter::handleMessage(GstMessage* message) {
             gchar* debug;
             gst_message_parse_error(message, &error, &debug);
             
-            Logger::error("GStreamer Hatası: " + std::string(error->message));
+            Logger::error("GStreamer Error: " + std::string(error->message));
             if (debug) {
-                Logger::debug("Debug bilgisi: " + std::string(debug));
+                Logger::debug("Debug info: " + std::string(debug));
             }
             
             g_error_free(error);
@@ -310,14 +310,14 @@ void VideoConverter::handleMessage(GstMessage* message) {
             break;
         }
         case GST_MESSAGE_EOS:
-            Logger::info("Dönüştürme tamamlandı (EOS)");
+            Logger::info("Conversion completed (EOS)");
             g_main_loop_quit(g_main_loop_new(nullptr, FALSE));
             break;
         case GST_MESSAGE_STATE_CHANGED: {
             if (GST_MESSAGE_SRC(message) == GST_OBJECT(pipeline)) {
                 GstState old_state, new_state;
                 gst_message_parse_state_changed(message, &old_state, &new_state, nullptr);
-                Logger::debug("Pipeline durumu değişti: " + 
+                Logger::debug("Pipeline state changed: " +
                             std::string(gst_element_state_get_name(old_state)) + " -> " +
                             std::string(gst_element_state_get_name(new_state)));
             }
@@ -416,19 +416,19 @@ std::string Logger::levelToString(Level level) {
 }
 EOF
 
-# README dosyası
+# README file
 cat > 03.video_converter/README.md << 'EOF'
 # GStreamer Video Converter
 
-Basit bir video format dönüştürücü uygulaması.
+A simple video format converter application.
 
-## Özellikler
-- MP4, AVI, MKV, WEBM formatları desteklenir
+## Features
+- Supports MP4, AVI, MKV, WEBM formats
 - Progress tracking
-- Hata yönetimi
-- Log sistemi
+- Error handling
+- Logging system
 
-## Derleme
+## Build
 
 ```bash
 cd build
@@ -436,21 +436,21 @@ cmake ..
 make
 ```
 
-## Kullanım
+## Usage
 
 ```bash
 ./video-converter input.avi output.mp4 mp4
 ```
 
-## Desteklenen Formatlar
+## Supported Formats
 - mp4: H.264 video, MP4 container
 - avi: H.264 video, AVI container  
 - mkv: H.264 video, Matroska container
 - webm: VP8 video, WebM container
 EOF
 
-echo "✅ 03.video_converter projesi oluşturuldu!"
-echo "📁 Proje yapısı:"
+echo "✅ 03.video_converter project created!"
+echo "📁 Project structure:"
 echo "03.video_converter/"
 echo "├── CMakeLists.txt"
 echo "├── README.md"
@@ -464,10 +464,10 @@ echo "│   └── Logger.cpp"
 echo "├── build/"
 echo "└── test_videos/"
 echo ""
-echo "🔨 Derlemek için:"
+echo "🔨 To build:"
 echo "cd 03.video_converter/build"
 echo "cmake .."
 echo "make"
 echo ""
-echo "🎬 Kullanım:"
+echo "🎬 Usage:"
 echo "./video-converter input.mp4 output.avi avi"

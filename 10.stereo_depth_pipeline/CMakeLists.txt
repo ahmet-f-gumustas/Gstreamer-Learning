@@ -12,7 +12,7 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-# ── Bağımlılıklar ────────────────────────────────────────────────────────────
+# ── Dependencies ─────────────────────────────────────────────────────────────
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(GST REQUIRED
@@ -24,14 +24,14 @@ pkg_check_modules(GST REQUIRED
 find_package(OpenCV REQUIRED COMPONENTS core imgproc calib3d highgui)
 find_package(Threads REQUIRED)
 
-# ── Include dizinleri ────────────────────────────────────────────────────────
+# ── Include directories ──────────────────────────────────────────────────────
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${GST_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
 )
 
-# ── Kaynak dosyalar ──────────────────────────────────────────────────────────
+# ── Source files ─────────────────────────────────────────────────────────────
 set(SOURCES
     src/main.cpp
     src/stereo_pipeline.cpp
@@ -49,7 +49,7 @@ target_link_libraries(${PROJECT_NAME}
 
 target_compile_options(${PROJECT_NAME} PRIVATE ${GST_CFLAGS_OTHER})
 
-# ── Derleme mesajları ────────────────────────────────────────────────────────
+# ── Build messages ───────────────────────────────────────────────────────────
 message(STATUS "Build type    : ${CMAKE_BUILD_TYPE}")
 message(STATUS "GStreamer ver : ${GST_gstreamer-1.0_VERSION}")
 message(STATUS "OpenCV ver    : ${OpenCV_VERSION}")

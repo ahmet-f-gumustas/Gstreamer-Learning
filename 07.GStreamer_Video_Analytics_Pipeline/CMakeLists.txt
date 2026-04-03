@@ -1,32 +1,32 @@
-# GStreamer Video Analytics Pipeline CMake Dosyası
-# Minimum CMake versiyonu
+# GStreamer Video Analytics Pipeline CMake File
+# Minimum CMake version
 cmake_minimum_required(VERSION 3.22)
 
-# Proje tanımı
-project(gstreamer_video_analytics 
+# Project definition
+project(gstreamer_video_analytics
     VERSION 1.0.0
-    DESCRIPTION "GStreamer tabanlı video analiz uygulaması"
+    DESCRIPTION "GStreamer-based video analytics application"
     LANGUAGES CXX C)
 
-# C++ standardı
+# C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Derleme türü varsayılan olarak Release
+# Default build type is Release
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Derleme bayrakları
+# Compiler flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-# PkgConfig modülünü yükle
+# Load PkgConfig module
 find_package(PkgConfig REQUIRED)
 
-# GStreamer bileşenlerini bul
-pkg_check_modules(GSTREAMER REQUIRED 
+# Find GStreamer components
+pkg_check_modules(GSTREAMER REQUIRED
     gstreamer-1.0>=1.20
     gstreamer-base-1.0>=1.20
     gstreamer-app-1.0>=1.20
@@ -35,34 +35,34 @@ pkg_check_modules(GSTREAMER REQUIRED
     gstreamer-rtsp-server-1.0>=1.20
 )
 
-# OpenCV'yi bul (opsiyonel)
+# Find OpenCV (optional)
 find_package(OpenCV QUIET)
 if(OpenCV_FOUND)
-    message(STATUS "OpenCV bulundu: ${OpenCV_VERSION}")
+    message(STATUS "OpenCV found: ${OpenCV_VERSION}")
     add_definitions(-DHAVE_OPENCV)
 else()
-    message(STATUS "OpenCV bulunamadı, hareket algılama devre dışı")
+    message(STATUS "OpenCV not found, motion detection disabled")
 endif()
 
-# YAML-CPP'yi bul
+# Find YAML-CPP
 pkg_check_modules(YAML_CPP REQUIRED yaml-cpp)
 
-# Thread kütüphanesi
+# Thread library
 find_package(Threads REQUIRED)
 
-# Include dizinleri
+# Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${GSTREAMER_INCLUDE_DIRS}
     ${YAML_CPP_INCLUDE_DIRS}
 )
 
-# OpenCV include dizinleri (eğer bulunduysa)
+# OpenCV include directories (if found)
 if(OpenCV_FOUND)
     include_directories(${OpenCV_INCLUDE_DIRS})
 endif()
 
-# Kaynak dosyaları
+# Source files
 set(SOURCES
     src/main.cpp
     src/video_processor.cpp
@@ -71,7 +71,7 @@ set(SOURCES
     src/pipeline_manager.cpp
 )
 
-# Header dosyaları
+# Header files
 set(HEADERS
     include/video_processor.h
     include/rtsp_streamer.h
@@ -79,64 +79,64 @@ set(HEADERS
     include/pipeline_manager.h
 )
 
-# Çalıştırılabilir dosya oluştur
+# Create executable
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
-# Kütüphaneleri bağla
+# Link libraries
 target_link_libraries(${PROJECT_NAME}
     ${GSTREAMER_LIBRARIES}
     ${YAML_CPP_LIBRARIES}
     Threads::Threads
 )
 
-# OpenCV kütüphanelerini bağla (eğer bulunduysa)
+# Link OpenCV libraries (if found)
 if(OpenCV_FOUND)
     target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 endif()
 
-# Derleme bayraklarını ekle
-target_compile_options(${PROJECT_NAME} PRIVATE 
+# Add compiler flags
+target_compile_options(${PROJECT_NAME} PRIVATE
     ${GSTREAMER_CFLAGS_OTHER}
     ${YAML_CPP_CFLAGS_OTHER}
 )
 
-# Kurulum hedefleri
+# Install targets
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
 )
 
-# Config dosyalarını kur
+# Install config files
 install(DIRECTORY config/
     DESTINATION share/${PROJECT_NAME}/config
 )
 
-# Test video dosyasını kur (opsiyonel)
+# Install test video files (optional)
 install(DIRECTORY assets/
     DESTINATION share/${PROJECT_NAME}/assets
     OPTIONAL
 )
 
-# Özel hedefler
-# Format kontrolü için clang-format hedefi
+# Custom targets
+# clang-format target for code formatting
 add_custom_target(format
     COMMAND clang-format -i ${SOURCES} ${HEADERS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Kod formatlama yapılıyor..."
+    COMMENT "Running code formatting..."
 )
 
-# Dokümantasyon oluşturma (Doxygen)
+# Documentation generation (Doxygen)
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
     add_custom_target(doc
         COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Doxygen ile dokümantasyon oluşturuluyor..."
+        COMMENT "Generating documentation with Doxygen..."
         VERBATIM
     )
 endif()
 
-# Debug bilgileri
-message(STATUS "=== Derleme Yapılandırması ===")
+# Debug information
+message(STATUS "=== Build Configuration ===")
 message(STATUS "CMake Version: ${CMAKE_VERSION}")
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
@@ -145,7 +145,7 @@ message(STATUS "GStreamer Version: ${GSTREAMER_VERSION}")
 message(STATUS "Install Prefix: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "===============================")
 
-# CPack yapılandırması (paketleme için)
+# CPack configuration (for packaging)
 set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})

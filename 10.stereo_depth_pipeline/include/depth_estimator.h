@@ -4,12 +4,12 @@
 #include <opencv2/calib3d.hpp>
 #include <string>
 
-// ─── Sonuç yapısı ────────────────────────────────────────────────────────────
+// ─── Result structure ────────────────────────────────────────────────────────
 struct DepthResult {
-    cv::Mat disparity16;   // Ham disparity (16-bit, /16 = gerçek değer)
-    cv::Mat disparityF;    // float disparity (piksel)
-    cv::Mat depthMap;      // Derinlik haritası (metre, float)
-    cv::Mat colorDepth;    // Renklendirme görüntüsü (BGR, 8-bit)
+    cv::Mat disparity16;   // Raw disparity (16-bit, /16 = actual value)
+    cv::Mat disparityF;    // float disparity (pixels)
+    cv::Mat depthMap;      // Depth map (meters, float)
+    cv::Mat colorDepth;    // Colorized image (BGR, 8-bit)
     float   minDepthM  = 0.f;
     float   maxDepthM  = 0.f;
     bool    valid      = false;
@@ -17,54 +17,54 @@ struct DepthResult {
 
 // ─── DepthEstimator ──────────────────────────────────────────────────────────
 //
-// Stereo görüntü çiftinden derinlik haritası üretir.
+// Produces a depth map from a stereo image pair.
 //
-// Kalibrasyon olmadan:
+// Without calibration:
 //   depth = (focalPx * baselineM) / disparity
 //
-// Kalibrasyon ile (loadCalibration çağrıldıktan sonra):
-//   Görüntüler rektifiye edilir, Q matrisi ile 3B nokta bulutu üretilir.
+// With calibration (after loadCalibration is called):
+//   Images are rectified, and a 3D point cloud is produced via the Q matrix.
 //
-// Simülasyon modu:
-//   setSim(true) çağrılırsa sağ görüntü, sol görüntünün yatay kaydırılmış
-//   hali olarak üretilir. Gerçek bir stereo kamera çiftini taklit eder.
+// Simulation mode:
+//   If setSim(true) is called, the right image is produced as a horizontally
+//   shifted version of the left image. Mimics a real stereo camera pair.
 //
 class DepthEstimator {
 public:
     enum class Algorithm {
-        BLOCK_MATCHING,    // cv::StereoBM  – hızlı, daha az hassas
-        SEMI_GLOBAL_BM     // cv::StereoSGBM – yavaş, daha hassas
+        BLOCK_MATCHING,    // cv::StereoBM  – fast, less accurate
+        SEMI_GLOBAL_BM     // cv::StereoSGBM – slow, more accurate
     };
 
     DepthEstimator();
 
-    // ── Parametreler ──────────────────────────────────────────────────────────
+    // ── Parameters ───────────────────────────────────────────────────────────
     void setAlgorithm(Algorithm a) { algo_ = a; initMatchers(); }
     void setFocalLength(float f)   { focalPx_ = f; }
     void setBaseline(float b)      { baselineM_ = b; }
     void setMaxDepth(float d)      { maxDepthM_ = d; }
 
-    // Simülasyon modunda sağ görüntüyü sol görüntüden üret (shift piksel)
+    // In simulation mode, generate right image from left image (shift pixels)
     void setSim(bool enable, int shift = 30) { simMode_ = enable; simShift_ = shift; }
 
-    // ── Kalibrasyon ───────────────────────────────────────────────────────────
-    // Kalibrasyon YAML dosyasından yükle (OpenCV stereoCalibrate çıktısı)
+    // ── Calibration ──────────────────────────────────────────────────────────
+    // Load from calibration YAML file (OpenCV stereoCalibrate output)
     bool loadCalibration(const std::string& yamlPath);
 
-    // ── Ana fonksiyon ─────────────────────────────────────────────────────────
+    // ── Main function ────────────────────────────────────────────────────────
     DepthResult compute(const cv::Mat& left, const cv::Mat& right);
 
-    // Piksel koordinatındaki metresi derinliği döner (-1 = geçersiz)
+    // Returns depth in meters at pixel coordinate (-1 = invalid)
     float depthAt(const DepthResult& r, int x, int y) const;
 
 private:
     Algorithm algo_     = Algorithm::BLOCK_MATCHING;
     float focalPx_      = 554.f;    // 640x480 @ ~60° FOV
     float baselineM_    = 0.06f;    // 6 cm
-    float maxDepthM_    = 10.f;     // görüntüleme üst sınırı
+    float maxDepthM_    = 10.f;     // display upper limit
 
     bool simMode_       = false;
-    int  simShift_      = 30;       // piksel
+    int  simShift_      = 30;       // pixels
 
     bool calibrated_    = false;
     cv::Mat R1_, R2_, P1_, P2_, Q_;
@@ -75,7 +75,7 @@ private:
 
     void initMatchers();
 
-    // Yardımcı fonksiyonlar
+    // Helper functions
     void        rectify(cv::Mat& left, cv::Mat& right) const;
     cv::Mat     computeDisparity(const cv::Mat& leftGray, const cv::Mat& rightGray);
     cv::Mat     disparityToDepth(const cv::Mat& disp16);

@@ -1,9 +1,9 @@
 /**
  * @file rtsp_streamer.h
- * @brief RTSP server ve streaming yönetim sınıfı
- * 
- * Bu sınıf, GStreamer RTSP Server kullanarak video akışlarını
- * ağ üzerinden yayınlamak için gerekli işlevleri sağlar.
+ * @brief RTSP server and streaming management class
+ *
+ * This class provides the necessary functionality for streaming
+ * video over the network using GStreamer RTSP Server.
  */
 
 #ifndef RTSP_STREAMER_H
@@ -20,358 +20,358 @@
 #include <map>
 
 /**
- * @brief RTSP akış kalitesi profilleri
+ * @brief RTSP stream quality profiles
  */
 enum class StreamProfile {
     LOW,        // 480p, 1 Mbps
     MEDIUM,     // 720p, 2.5 Mbps
     HIGH,       // 1080p, 5 Mbps
     ULTRA,      // 4K, 15 Mbps
-    CUSTOM      // Özel ayarlar
+    CUSTOM      // Custom settings
 };
 
 /**
- * @brief RTSP güvenlik türleri
+ * @brief RTSP security types
  */
 enum class SecurityType {
-    NONE,           // Güvenlik yok
-    BASIC_AUTH,     // Basit kullanıcı adı/şifre
+    NONE,           // No security
+    BASIC_AUTH,     // Basic username/password
     DIGEST_AUTH,    // Digest authentication
-    TOKEN_AUTH      // Token tabanlı
+    TOKEN_AUTH      // Token-based
 };
 
 /**
- * @brief RTSP akış yapılandırması
+ * @brief RTSP stream configuration
  */
 struct RTSPConfig {
-    // Server ayarları
-    std::string address = "0.0.0.0";        // Dinleme adresi
-    int port = 8554;                        // RTSP portu
-    std::string mount_point = "/live";      // Mount noktası
-    
-    // Video ayarları
+    // Server settings
+    std::string address = "0.0.0.0";        // Listen address
+    int port = 8554;                        // RTSP port
+    std::string mount_point = "/live";      // Mount point
+
+    // Video settings
     StreamProfile profile = StreamProfile::MEDIUM;
     int width = 1280;
     int height = 720;
     int framerate = 30;
     int bitrate = 2500000;                  // 2.5 Mbps
-    std::string encoder = "x264enc";        // Video kodlayıcı
-    
-    // Ses ayarları
+    std::string encoder = "x264enc";        // Video encoder
+
+    // Audio settings
     bool enable_audio = true;
     std::string audio_encoder = "opus";
     int audio_bitrate = 128000;             // 128 kbps
     int audio_channels = 2;
     int audio_samplerate = 48000;
-    
-    // Güvenlik ayarları
+
+    // Security settings
     SecurityType security = SecurityType::NONE;
     std::string username = "";
     std::string password = "";
-    std::vector<std::string> allowed_ips;   // İzin verilen IP listesi
-    
-    // Performans ayarları
-    int max_clients = 10;                   // Maksimum istemci sayısı
-    int buffer_size = 200;                  // Buffer boyutu (kare)
-    int latency = 200;                      // Hedef gecikme (ms)
-    bool enable_rtcp = true;                // RTCP etkin
-    
-    // Multicast ayarları
+    std::vector<std::string> allowed_ips;   // Allowed IP list
+
+    // Performance settings
+    int max_clients = 10;                   // Maximum client count
+    int buffer_size = 200;                  // Buffer size (frames)
+    int latency = 200;                      // Target latency (ms)
+    bool enable_rtcp = true;                // RTCP enabled
+
+    // Multicast settings
     bool enable_multicast = false;
     std::string multicast_address = "224.1.1.1";
     int multicast_port = 5000;
     int multicast_ttl = 1;
-    
-    // Kayıt ayarları
+
+    // Recording settings
     bool enable_recording = false;
     std::string record_path = "/tmp/rtsp_recordings";
-    int max_record_duration = 3600;         // Maksimum kayıt süresi (saniye)
+    int max_record_duration = 3600;         // Maximum recording duration (seconds)
 };
 
 /**
- * @brief İstemci bilgisi
+ * @brief Client information
  */
 struct ClientInfo {
-    std::string id;                         // İstemci ID
-    std::string address;                    // IP adresi
-    int port;                               // Port numarası
+    std::string id;                         // Client ID
+    std::string address;                    // IP address
+    int port;                               // Port number
     std::chrono::time_point<std::chrono::steady_clock> connect_time;
-    guint64 bytes_sent = 0;                 // Gönderilen veri
-    guint64 frames_sent = 0;                // Gönderilen kare sayısı
-    double bandwidth = 0.0;                 // Anlık bant genişliği (Mbps)
-    bool is_playing = false;                // Oynatma durumu
+    guint64 bytes_sent = 0;                 // Data sent
+    guint64 frames_sent = 0;                // Frames sent
+    double bandwidth = 0.0;                 // Current bandwidth (Mbps)
+    bool is_playing = false;                // Playback state
 };
 
 /**
- * @brief RTSP server istatistikleri
+ * @brief RTSP server statistics
  */
 struct RTSPStats {
-    int active_clients = 0;                 // Aktif istemci sayısı
-    guint64 total_bytes_sent = 0;           // Toplam gönderilen veri
-    guint64 total_frames_sent = 0;          // Toplam gönderilen kare
-    double average_bandwidth = 0.0;         // Ortalama bant genişliği
-    int total_connections = 0;              // Toplam bağlantı sayısı
-    std::chrono::duration<double> uptime;   // Çalışma süresi
+    int active_clients = 0;                 // Active client count
+    guint64 total_bytes_sent = 0;           // Total data sent
+    guint64 total_frames_sent = 0;          // Total frames sent
+    double average_bandwidth = 0.0;         // Average bandwidth
+    int total_connections = 0;              // Total connection count
+    std::chrono::duration<double> uptime;   // Uptime
 };
 
 /**
- * @brief İstemci bağlantı callback'i
- * @param client_info İstemci bilgisi
- * @param connected true: bağlandı, false: ayrıldı
+ * @brief Client connection callback
+ * @param client_info Client information
+ * @param connected true: connected, false: disconnected
  */
 using ClientCallback = std::function<void(const ClientInfo&, bool)>;
 
 /**
- * @brief RTSP yayıncı sınıfı
+ * @brief RTSP streamer class
  */
 class RTSPStreamer {
 public:
     /**
      * @brief Constructor
-     * @param config RTSP yapılandırması
+     * @param config RTSP configuration
      */
     explicit RTSPStreamer(const RTSPConfig& config = RTSPConfig());
-    
+
     /**
      * @brief Destructor
      */
     ~RTSPStreamer();
-    
+
     /**
-     * @brief RTSP server'ı başlatır
-     * @return Başarılı ise true
+     * @brief Starts the RTSP server
+     * @return true if successful
      */
     bool start();
-    
+
     /**
-     * @brief RTSP server'ı durdurur
+     * @brief Stops the RTSP server
      */
     void stop();
-    
+
     /**
-     * @brief Server çalışıyor mu kontrol eder
-     * @return Çalışıyor ise true
+     * @brief Checks if server is running
+     * @return true if running
      */
     bool isRunning() const { return is_running_; }
-    
+
     /**
-     * @brief Video kaynağı elementini ayarlar
-     * @param source Kaynak elementi
+     * @brief Sets the video source element
+     * @param source Source element
      */
     void setVideoSource(GstElement* source);
-    
+
     /**
-     * @brief Ses kaynağı elementini ayarlar
-     * @param source Kaynak elementi
+     * @brief Sets the audio source element
+     * @param source Source element
      */
     void setAudioSource(GstElement* source);
-    
+
     /**
-     * @brief Yapılandırmayı günceller
-     * @param config Yeni yapılandırma
+     * @brief Updates configuration
+     * @param config New configuration
      */
     void updateConfig(const RTSPConfig& config);
-    
+
     /**
-     * @brief Mevcut yapılandırmayı döndürür
-     * @return RTSP yapılandırması
+     * @brief Returns current configuration
+     * @return RTSP configuration
      */
     RTSPConfig getConfig() const;
-    
+
     /**
-     * @brief Stream URL'sini döndürür
+     * @brief Returns the stream URL
      * @return RTSP URL
      */
     std::string getStreamURL() const;
-    
+
     /**
-     * @brief Aktif istemci listesini döndürür
-     * @return İstemci bilgileri
+     * @brief Returns the list of active clients
+     * @return Client information
      */
     std::vector<ClientInfo> getClients() const;
-    
+
     /**
-     * @brief İstemciyi bağlantıdan koparır
-     * @param client_id İstemci ID
-     * @return Başarılı ise true
+     * @brief Disconnects a client
+     * @param client_id Client ID
+     * @return true if successful
      */
     bool disconnectClient(const std::string& client_id);
-    
+
     /**
-     * @brief Server istatistiklerini döndürür
-     * @return İstatistikler
+     * @brief Returns server statistics
+     * @return Statistics
      */
     RTSPStats getStats() const;
-    
+
     /**
-     * @brief İstemci callback'i ayarlar
-     * @param callback Bağlantı/kopma olayları için
+     * @brief Sets the client callback
+     * @param callback For connection/disconnection events
      */
     void setClientCallback(ClientCallback callback);
-    
+
     /**
-     * @brief Yeni mount point ekler
-     * @param path Mount yolu
-     * @param pipeline Pipeline tanımı
-     * @return Başarılı ise true
+     * @brief Adds a new mount point
+     * @param path Mount path
+     * @param pipeline Pipeline definition
+     * @return true if successful
      */
     bool addMountPoint(const std::string& path, const std::string& pipeline);
-    
+
     /**
-     * @brief Mount point kaldırır
-     * @param path Mount yolu
-     * @return Başarılı ise true
+     * @brief Removes a mount point
+     * @param path Mount path
+     * @return true if successful
      */
     bool removeMountPoint(const std::string& path);
-    
+
     /**
-     * @brief Güvenlik ayarlarını günceller
-     * @param type Güvenlik türü
-     * @param username Kullanıcı adı
-     * @param password Şifre
+     * @brief Updates security settings
+     * @param type Security type
+     * @param username Username
+     * @param password Password
      */
-    void setSecurity(SecurityType type, 
+    void setSecurity(SecurityType type,
                      const std::string& username = "",
                      const std::string& password = "");
-    
+
     /**
-     * @brief IP tabanlı erişim kontrolü ekler
-     * @param allowed_ips İzin verilen IP listesi
+     * @brief Adds IP-based access control
+     * @param allowed_ips Allowed IP list
      */
     void setIPFilter(const std::vector<std::string>& allowed_ips);
-    
+
     /**
-     * @brief Akışı kaydet
-     * @param enable true: kayıt başlat, false: durdur
-     * @param filename Kayıt dosya adı
-     * @return Başarılı ise true
+     * @brief Record the stream
+     * @param enable true: start recording, false: stop
+     * @param filename Recording file name
+     * @return true if successful
      */
     bool recordStream(bool enable, const std::string& filename = "");
-    
+
     /**
-     * @brief Anlık görüntü al
-     * @param filename Dosya adı
-     * @return Başarılı ise true
+     * @brief Take a snapshot
+     * @param filename File name
+     * @return true if successful
      */
     bool takeSnapshot(const std::string& filename);
 
 private:
     /**
-     * @brief RTSP server'ı oluşturur
-     * @return Başarılı ise true
+     * @brief Creates the RTSP server
+     * @return true if successful
      */
     bool createServer();
-    
+
     /**
-     * @brief Media factory oluşturur
-     * @return Media factory pointer'ı
+     * @brief Creates the media factory
+     * @return Media factory pointer
      */
     GstRTSPMediaFactory* createMediaFactory();
-    
+
     /**
-     * @brief Pipeline string'i oluşturur
-     * @return GStreamer pipeline tanımı
+     * @brief Builds the pipeline string
+     * @return GStreamer pipeline definition
      */
     std::string buildPipelineString();
-    
+
     /**
-     * @brief Güvenlik ayarlarını uygular
+     * @brief Applies security settings
      */
     void applySecurity();
-    
+
     /**
-     * @brief İstemci bağlandı callback'i
+     * @brief Client connected callback
      * @param server RTSP server
-     * @param client İstemci nesnesi
-     * @param user_data Kullanıcı verisi
+     * @param client Client object
+     * @param user_data User data
      */
     static void onClientConnected(GstRTSPServer* server,
                                   GstRTSPClient* client,
                                   gpointer user_data);
-    
+
     /**
-     * @brief İstemci ayrıldı callback'i
+     * @brief Client disconnected callback
      * @param server RTSP server
-     * @param client İstemci nesnesi
-     * @param user_data Kullanıcı verisi
+     * @param client Client object
+     * @param user_data User data
      */
     static void onClientDisconnected(GstRTSPServer* server,
                                     GstRTSPClient* client,
                                     gpointer user_data);
-    
+
     /**
-     * @brief Media yapılandırma callback'i
+     * @brief Media configuration callback
      * @param factory Media factory
-     * @param media Media nesnesi
-     * @param user_data Kullanıcı verisi
+     * @param media Media object
+     * @param user_data User data
      */
     static void onMediaConfigure(GstRTSPMediaFactory* factory,
                                 GstRTSPMedia* media,
                                 gpointer user_data);
-    
+
     /**
-     * @brief Stream durumu değişti callback'i
-     * @param media Media nesnesi
-     * @param state Yeni durum
-     * @param user_data Kullanıcı verisi
+     * @brief Stream state changed callback
+     * @param media Media object
+     * @param state New state
+     * @param user_data User data
      */
     static void onMediaStateChanged(GstRTSPMedia* media,
                                    GstState state,
                                    gpointer user_data);
-    
+
     /**
-     * @brief İstemci bilgisi oluştur
-     * @param client RTSP istemci nesnesi
-     * @return İstemci bilgisi
+     * @brief Create client info
+     * @param client RTSP client object
+     * @return Client information
      */
     ClientInfo createClientInfo(GstRTSPClient* client);
-    
+
     /**
-     * @brief Server ana döngüsü
+     * @brief Server main loop
      */
     void serverMainLoop();
-    
+
     /**
-     * @brief İstatistikleri güncelle
+     * @brief Update statistics
      */
     void updateStats();
-    
-    // Üye değişkenler
-    RTSPConfig config_;                         // Server yapılandırması
-    
-    // RTSP Server nesneleri
-    GstRTSPServer* server_ = nullptr;           // Ana server
+
+    // Member variables
+    RTSPConfig config_;                         // Server configuration
+
+    // RTSP Server objects
+    GstRTSPServer* server_ = nullptr;           // Main server
     GstRTSPMediaFactory* factory_ = nullptr;    // Media factory
-    GstRTSPAuth* auth_ = nullptr;              // Yetkilendirme
-    GstRTSPToken* token_ = nullptr;            // Güvenlik token'ı
-    GstRTSPMountPoints* mounts_ = nullptr;      // Mount noktaları
-    
-    // Video/Ses kaynakları
-    GstElement* video_source_ = nullptr;        // Video kaynağı
-    GstElement* audio_source_ = nullptr;        // Ses kaynağı
-    
-    // Thread ve senkronizasyon
-    std::unique_ptr<std::thread> server_thread_; // Server thread'i
-    GMainLoop* main_loop_ = nullptr;            // GLib ana döngüsü
-    std::atomic<bool> is_running_{false};       // Çalışma durumu
-    
-    // İstemci yönetimi
-    std::map<std::string, ClientInfo> clients_; // Aktif istemciler
-    mutable std::mutex clients_mutex_;          // İstemci mutex'i
-    ClientCallback client_callback_;            // İstemci callback'i
-    
-    // İstatistikler
-    RTSPStats stats_;                          // Server istatistikleri
-    mutable std::mutex stats_mutex_;           // İstatistik mutex'i
+    GstRTSPAuth* auth_ = nullptr;              // Authorization
+    GstRTSPToken* token_ = nullptr;            // Security token
+    GstRTSPMountPoints* mounts_ = nullptr;      // Mount points
+
+    // Video/Audio sources
+    GstElement* video_source_ = nullptr;        // Video source
+    GstElement* audio_source_ = nullptr;        // Audio source
+
+    // Thread and synchronization
+    std::unique_ptr<std::thread> server_thread_; // Server thread
+    GMainLoop* main_loop_ = nullptr;            // GLib main loop
+    std::atomic<bool> is_running_{false};       // Running state
+
+    // Client management
+    std::map<std::string, ClientInfo> clients_; // Active clients
+    mutable std::mutex clients_mutex_;          // Client mutex
+    ClientCallback client_callback_;            // Client callback
+
+    // Statistics
+    RTSPStats stats_;                          // Server statistics
+    mutable std::mutex stats_mutex_;           // Statistics mutex
     std::chrono::time_point<std::chrono::steady_clock> start_time_;
-    
-    // Kayıt için
-    GstElement* recording_bin_ = nullptr;       // Kayıt elementi
-    bool is_recording_ = false;                 // Kayıt durumu
-    std::string record_filename_;               // Kayıt dosya adı
-    
-    // Multicast grubu
-    GstRTSPAddressPool* address_pool_ = nullptr; // Adres havuzu
+
+    // For recording
+    GstElement* recording_bin_ = nullptr;       // Recording element
+    bool is_recording_ = false;                 // Recording state
+    std::string record_filename_;               // Recording file name
+
+    // Multicast group
+    GstRTSPAddressPool* address_pool_ = nullptr; // Address pool
 };
 
 #endif // RTSP_STREAMER_H

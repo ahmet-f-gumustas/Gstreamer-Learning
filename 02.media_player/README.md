@@ -1,105 +1,105 @@
 ## GStreamer C++ Media Player
 
-Bu proje, GStreamer framework'ünü kullanarak basit bir medya oynatıcı uygulaması oluşturacaktır. Aşağıdaki özellikleri içerecek:
+This project will create a simple media player application using the GStreamer framework. It will include the following features:
 
-1. Video ve ses dosyalarını oynatabilme
-2. Duraklat/Devam et kontrolü
-3. İleri/geri atlama özelliği
-4. Dosya seçme yeteneği
-5. Medya bilgilerini gösterme (süre, codec, vb.)
+1. Ability to play video and audio files
+2. Pause/Resume control
+3. Forward/backward skip feature
+4. File selection capability
+5. Displaying media information (duration, codec, etc.)
 
-### Proje Yapısı
+### Project Structure
 
 ```
 gstreamer-cpp-player/
 │
-├── CMakeLists.txt          # Ana CMake yapılandırma dosyası
-├── include/                # Header dosyaları
-│   ├── MediaPlayer.hpp     # MediaPlayer sınıfı tanımı
-│   └── Utils.hpp           # Yardımcı fonksiyonlar
+├── CMakeLists.txt          # Main CMake configuration file
+├── include/                # Header files
+│   ├── MediaPlayer.hpp     # MediaPlayer class definition
+│   └── Utils.hpp           # Utility functions
 │
-├── src/                    # Kaynak kodlar
-│   ├── main.cpp            # Ana uygulama
-│   ├── MediaPlayer.cpp     # MediaPlayer sınıfı implementasyonu
-│   └── Utils.cpp           # Yardımcı fonksiyonlar implementasyonu
+├── src/                    # Source code
+│   ├── main.cpp            # Main application
+│   ├── MediaPlayer.cpp     # MediaPlayer class implementation
+│   └── Utils.cpp           # Utility functions implementation
 │
-└── README.md               # Proje hakkında bilgi
+└── README.md               # Project information
 ```
 
 ```markdown
 # GStreamer C++ Media Player
 
-Bu uygulama, GStreamer multimedia framework'ünü kullanan basit bir C++ medya oynatıcısıdır.
+This application is a simple C++ media player using the GStreamer multimedia framework.
 
-## Özellikler
+## Features
 
-- Video ve ses dosyalarını oynatma
-- Temel oynatıcı kontrolleri (oynat, duraklat, durdur)
-- İleri/geri atlama
-- Medya bilgilerini gösterme
+- Playing video and audio files
+- Basic player controls (play, pause, stop)
+- Forward/backward skip
+- Displaying media information
 
-## Gereksinimler
+## Requirements
 
-- C++14 uyumlu derleyici
-- CMake 3.10 veya üzeri
-- GStreamer 1.0 ve geliştirme paketleri
+- C++14 compatible compiler
+- CMake 3.10 or higher
+- GStreamer 1.0 and development packages
 
-## Kurulum
+## Installation
 
 ### Linux
 
 ```bash
-# GStreamer geliştirme paketlerini yükleyin
+# Install GStreamer development packages
 sudo apt-get install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1.0-dev
 
-# Projeyi derleyin
+# Build the project
 mkdir build && cd build
 cmake ..
 make
 
-# Çalıştırın
-./media-player [dosya_adı]
+# Run
+./media-player [file_name]
 ```
 
-# Çalıştırın
-./media-player.exe [dosya_adı]
+# Run
+./media-player.exe [file_name]
 ```
 
-## Kullanım
+## Usage
 
-Program çalıştığında, bir menü gösterecektir:
+When the program runs, it will display a menu:
 
-1. Dosya Aç - Bir medya dosyası açar
-2. Oynat - Mevcut dosyayı oynatır
-3. Duraklat - Oynatmayı duraklatır
-4. Durdur - Oynatmayı durdurur
-5. 10 saniye ileri - 10 saniye ileri atlar
-6. 10 saniye geri - 10 saniye geri atlar
-7. Belirli bir konuma atla - Belirtilen saniyeye atlar
-8. Medya bilgilerini göster - Mevcut dosya hakkında bilgi gösterir
-9. Konum bilgisini güncelle - Pozisyon bilgisi güncellemesini açar/kapatır
-0. Çıkış - Programdan çıkar
+1. Open File - Opens a media file
+2. Play - Plays the current file
+3. Pause - Pauses playback
+4. Stop - Stops playback
+5. Skip 10 seconds forward - Skips 10 seconds forward
+6. Skip 10 seconds backward - Skips 10 seconds backward
+7. Seek to a specific position - Seeks to the specified second
+8. Show media information - Shows information about the current file
+9. Toggle position update - Enables/disables position info updates
+0. Exit - Exits the program
 
-## Lisans
+## License
 
-Bu proje MIT lisansı altında dağıtılmaktadır.
+This project is distributed under the MIT license.
 ```
 
-### Derleme ve Çalıştırma
+### Building and Running
 
-1. Projeyi derlemek için:
+1. To build the project:
 ```bash
 mkdir build && cd build
 cmake ..
 make
 ```
 
-2. Programı çalıştırmak için:
+2. To run the program:
 ```bash
-./media-player [dosya_adı]
+./media-player [file_name]
 ```
 
-3. İsteğe bağlı olarak, programı yüklemek için:
+3. Optionally, to install the program:
 ```bash
 sudo make install
 ```

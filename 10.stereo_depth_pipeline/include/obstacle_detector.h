@@ -4,14 +4,14 @@
 #include <vector>
 #include <string>
 
-// ─── Tehlike seviyeleri ───────────────────────────────────────────────────────
+// ─── Danger levels ───────────────────────────────────────────────────────────
 enum class DangerLevel {
     SAFE,       // > cautionDist
-    CAUTION,    // dangerDist < mesafe <= cautionDist
+    CAUTION,    // dangerDist < distance <= cautionDist
     DANGER      // <= dangerDist
 };
 
-// ─── Tek engel ────────────────────────────────────────────────────────────────
+// ─── Single obstacle ─────────────────────────────────────────────────────────
 struct Obstacle {
     cv::Rect    bbox;
     float       distanceM;
@@ -19,7 +19,7 @@ struct Obstacle {
     std::string label;
 };
 
-// ─── Izgara hücresi ───────────────────────────────────────────────────────────
+// ─── Grid cell ───────────────────────────────────────────────────────────────
 struct GridCell {
     int         row, col;
     float       avgDepthM;
@@ -27,21 +27,21 @@ struct GridCell {
     cv::Rect    rect;
 };
 
-// ─── Analiz sonucu ────────────────────────────────────────────────────────────
+// ─── Analysis result ─────────────────────────────────────────────────────────
 struct ObstacleResult {
     std::vector<Obstacle>  obstacles;
     std::vector<GridCell>  grid;
     float                  closestM      = 999.f;
     DangerLevel            overallDanger = DangerLevel::SAFE;
-    cv::Mat                overlay;    // renk katmanlı görüntü
+    cv::Mat                overlay;    // color-layered image
 };
 
 // ─── ObstacleDetector ────────────────────────────────────────────────────────
 //
-// Derinlik haritasını ızgara hücrelerine böler ve her hücredeki ortalama
-// derinliğe göre SAFE / CAUTION / DANGER sınıflandırması yapar.
+// Divides the depth map into grid cells and classifies each cell as
+// SAFE / CAUTION / DANGER based on the average depth within the cell.
 //
-// Ek olarak blob analizi ile büyük engellerden bounding-box çıkarır.
+// Additionally extracts bounding boxes from large obstacles via blob analysis.
 //
 class ObstacleDetector {
 public:

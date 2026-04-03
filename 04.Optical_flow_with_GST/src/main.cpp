@@ -9,7 +9,7 @@ std::unique_ptr<OpticalFlowDetector> g_detector;
 
 void signalHandler(int signal) {
     if (signal == SIGINT || signal == SIGTERM) {
-        Utils::logInfo("Çıkış sinyali alındı, program sonlandırılıyor...");
+        Utils::logInfo("Exit signal received, terminating program...");
         if (g_detector) {
             g_detector->stop();
         }
@@ -19,31 +19,31 @@ void signalHandler(int signal) {
 }
 
 void printUsage(const char* programName) {
-    std::cout << "Kullanım: " << programName << " [seçenekler]" << std::endl;
-    std::cout << "Seçenekler:" << std::endl;
-    std::cout << "  -h, --help          Bu yardım mesajını göster" << std::endl;
-    std::cout << "  -f, --file <path>   Video dosyası kullan" << std::endl;
-    std::cout << "  -w, --webcam        Webcam kullan (varsayılan)" << std::endl;
-    std::cout << "  -t, --test          Test pattern kullan" << std::endl;
+    std::cout << "Usage: " << programName << " [options]" << std::endl;
+    std::cout << "Options:" << std::endl;
+    std::cout << "  -h, --help          Show this help message" << std::endl;
+    std::cout << "  -f, --file <path>   Use a video file" << std::endl;
+    std::cout << "  -w, --webcam        Use webcam (default)" << std::endl;
+    std::cout << "  -t, --test          Use test pattern" << std::endl;
     std::cout << std::endl;
-    std::cout << "Örnekler:" << std::endl;
-    std::cout << "  " << programName << "                    # Webcam kullan" << std::endl;
-    std::cout << "  " << programName << " -t                # Test pattern kullan" << std::endl;
-    std::cout << "  " << programName << " -f video.mp4      # Video dosyası kullan" << std::endl;
+    std::cout << "Examples:" << std::endl;
+    std::cout << "  " << programName << "                    # Use webcam" << std::endl;
+    std::cout << "  " << programName << " -t                # Use test pattern" << std::endl;
+    std::cout << "  " << programName << " -f video.mp4      # Use video file" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
-    // Signal handler kurulumu
+    // Signal handler setup
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     
-    // GStreamer başlat
+    // Initialize GStreamer
     if (!Utils::initializeGStreamer(argc, argv)) {
-        Utils::logError("GStreamer başlatılamadı!");
+        Utils::logError("Failed to initialize GStreamer!");
         return -1;
     }
     
-    // Command line argümanlarını parse et
+    // Parse command line arguments
     std::string videoSource = "";
     
     for (int i = 1; i < argc; i++) {
@@ -55,50 +55,50 @@ int main(int argc, char* argv[]) {
         } else if (arg == "-f" || arg == "--file") {
             if (i + 1 < argc) {
                 videoSource = argv[++i];
-                Utils::logInfo("Video dosyası kullanılacak: " + videoSource);
+                Utils::logInfo("Using video file: " + videoSource);
             } else {
-                Utils::logError("Dosya yolu belirtilmedi!");
+                Utils::logError("File path not specified!");
                 printUsage(argv[0]);
                 return -1;
             }
         } else if (arg == "-w" || arg == "--webcam") {
             videoSource = "webcam";
-            Utils::logInfo("Webcam kullanılacak");
+            Utils::logInfo("Using webcam");
         } else if (arg == "-t" || arg == "--test") {
             videoSource = "test";
-            Utils::logInfo("Test pattern kullanılacak");
+            Utils::logInfo("Using test pattern");
         } else {
-            Utils::logWarning("Bilinmeyen argüman: " + arg);
+            Utils::logWarning("Unknown argument: " + arg);
         }
     }
     
-    // Optical Flow Detector oluştur
+    // Create Optical Flow Detector
     g_detector = std::make_unique<OpticalFlowDetector>();
     
     if (!g_detector->initialize(videoSource)) {
-        Utils::logError("OpticalFlowDetector başlatılamadı!");
+        Utils::logError("Failed to initialize OpticalFlowDetector!");
         Utils::cleanupGStreamer();
         return -1;
     }
     
     Utils::logInfo("=== GStreamer Optical Flow Detector ===");
-    Utils::logInfo("Kontroller:");
-    Utils::logInfo("  'q' tuşu: Çıkış");
-    Utils::logInfo("  Ctrl+C: Programı sonlandır");
+    Utils::logInfo("Controls:");
+    Utils::logInfo("  'q' key: Quit");
+    Utils::logInfo("  Ctrl+C: Terminate program");
     Utils::logInfo("========================================");
     
     try {
-        // Ana döngüyü başlat
+        // Start main loop
         g_detector->run();
     } catch (const std::exception& e) {
-        Utils::logError("Hata oluştu: " + std::string(e.what()));
+        Utils::logError("An error occurred: " + std::string(e.what()));
     }
     
-    // Temizlik
+    // Cleanup
     g_detector->stop();
     g_detector.reset();
     Utils::cleanupGStreamer();
     
-    Utils::logInfo("Program başarıyla sonlandırıldı");
+    Utils::logInfo("Program terminated successfully");
     return 0;
 }

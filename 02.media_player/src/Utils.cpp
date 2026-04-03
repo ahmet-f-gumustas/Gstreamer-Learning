@@ -2,7 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <limits>  // Bu satırı ekleyin
+#include <limits>
 
 
 namespace Utils {
@@ -10,20 +10,20 @@ namespace Utils {
 std::string formatTime(gint64 time) {
     int hours, minutes, seconds, milliseconds;
     
-    // Nanosaniyeden diğer birimlere dönüştür
-    time /= GST_MSECOND;  // Nanosaniyeden milisaniyeye
+    // Convert from nanoseconds to other units
+    time /= GST_MSECOND;  // Nanoseconds to milliseconds
     milliseconds = time % 1000;
     
-    time /= 1000;  // Milisaniyeden saniyeye
+    time /= 1000;  // Milliseconds to seconds
     seconds = time % 60;
     
-    time /= 60;  // Saniyeden dakikaya
+    time /= 60;  // Seconds to minutes
     minutes = time % 60;
     
-    time /= 60;  // Dakikadan saate
+    time /= 60;  // Minutes to hours
     hours = static_cast<int>(time);
     
-    // Formatla
+    // Format
     std::ostringstream oss;
     if (hours > 0) {
         oss << hours << ":";
@@ -38,7 +38,7 @@ std::string formatTime(gint64 time) {
 
 std::string getMediaTypeFromCaps(GstCaps *caps) {
     if (!caps)
-        return "Bilinmeyen format";
+        return "Unknown format";
     
     const GstStructure *structure = gst_caps_get_structure(caps, 0);
     const gchar *name = gst_structure_get_name(structure);
@@ -47,7 +47,7 @@ std::string getMediaTypeFromCaps(GstCaps *caps) {
     if (g_str_has_prefix(name, "video/")) {
         type = "Video: ";
         
-        // Video formatı detayları
+        // Video format details
         int width, height;
         if (gst_structure_get_int(structure, "width", &width) &&
             gst_structure_get_int(structure, "height", &height)) {
@@ -59,21 +59,21 @@ std::string getMediaTypeFromCaps(GstCaps *caps) {
         if (encoding) {
             type += std::string(encoding);
         } else {
-            // Son çare olarak yapı adını kullan
-            type += std::string(name).substr(6); // "video/" kısmını at
+            // Use structure name as a last resort
+            type += std::string(name).substr(6); // Strip "video/" prefix
         }
     }
     else if (g_str_has_prefix(name, "audio/")) {
-        type = "Ses: ";
-        
-        // Ses formatı detayları
+        type = "Audio: ";
+
+        // Audio format details
         int rate, channels;
         if (gst_structure_get_int(structure, "rate", &rate)) {
             type += std::to_string(rate) + " Hz ";
         }
         
         if (gst_structure_get_int(structure, "channels", &channels)) {
-            type += std::to_string(channels) + " kanal ";
+            type += std::to_string(channels) + " channels ";
         }
         
         // Codec
@@ -81,40 +81,39 @@ std::string getMediaTypeFromCaps(GstCaps *caps) {
         if (encoding) {
             type += std::string(encoding);
         } else {
-            // Son çare olarak yapı adını kullan
-            type += std::string(name).substr(6); // "audio/" kısmını at
+            // Use structure name as a last resort
+            type += std::string(name).substr(6); // Strip "audio/" prefix
         }
     }
     else {
-        type = "Diğer: " + std::string(name);
+        type = "Other: " + std::string(name);
     }
     
     return type;
 }
 
 void handleError(GError *error, const char *debug) {
-    std::cerr << "HATA: " << error->message << std::endl;
+    std::cerr << "ERROR: " << error->message << std::endl;
     if (debug) {
-        std::cerr << "Hata ayıklama bilgisi: " << debug << std::endl;
+        std::cerr << "Debug info: " << debug << std::endl;
     }
 }
 
 bool getYesNoInput(const std::string& prompt) {
     std::string response;
-    std::cout << prompt << " (e/h): ";
+    std::cout << prompt << " (y/n): ";
     std::cin >> response;
-    
-    return (response == "e" || response == "E" || 
-            response == "evet" || response == "Evet" || 
-            response == "EVET" || response == "y" || 
-            response == "Y" || response == "yes");
+
+    return (response == "y" || response == "Y" ||
+            response == "yes" || response == "Yes" ||
+            response == "YES");
 }
 
 std::string getInput(const std::string& prompt) {
     std::string response;
     std::cout << prompt << ": ";
     
-    // Son satır sonu karakterini temizle
+    // Clear the trailing newline character
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     
     std::getline(std::cin, response);

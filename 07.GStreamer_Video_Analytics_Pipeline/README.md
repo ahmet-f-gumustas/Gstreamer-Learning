@@ -1,32 +1,32 @@
 # GStreamer Video Analytics Pipeline
 
-Bu proje, GStreamer kullanarak gerçek zamanlı video analizi yapan kapsamlı bir C++ uygulamasıdır. Video akışlarını işleme, hareket algılama, nesne takibi ve RTSP üzerinden yayın yapma özelliklerini içerir.
+This project is a comprehensive C++ application that performs real-time video analysis using GStreamer. It includes features for video stream processing, motion detection, object tracking, and streaming via RTSP.
 
-## Özellikler
+## Features
 
-- **Çoklu Kaynak Desteği**: Dosya, web kamerası, RTSP stream ve HTTP stream kaynaklarını destekler
-- **Hareket Algılama**: OpenCV entegrasyonu ile gerçek zamanlı hareket tespiti
-- **GPU Hızlandırma**: NVIDIA GPU'lar için NVENC/NVDEC codec desteği
-- **RTSP Server**: İşlenmiş videoyu RTSP üzerinden yayınlama
-- **Dinamik Pipeline**: Çalışma zamanında pipeline elemanlarını değiştirme
-- **Performans İzleme**: FPS, CPU ve GPU kullanımını izleme
-- **Kayıt Özelliği**: İşlenmiş videoyu farklı formatlarda kaydetme
+- **Multi-Source Support**: Supports file, webcam, RTSP stream, and HTTP stream sources
+- **Motion Detection**: Real-time motion detection with OpenCV integration
+- **GPU Acceleration**: NVENC/NVDEC codec support for NVIDIA GPUs
+- **RTSP Server**: Stream processed video over RTSP
+- **Dynamic Pipeline**: Modify pipeline elements at runtime
+- **Performance Monitoring**: Monitor FPS, CPU, and GPU usage
+- **Recording**: Save processed video in various formats
 
-## Gereksinimler
+## Requirements
 
 - Ubuntu 22.04 LTS
-- GStreamer 1.20+ (tüm eklentiler dahil)
+- GStreamer 1.20+ (including all plugins)
 - CMake 3.22+
 - GCC 11.4+
-- OpenCV 4.x (opsiyonel, hareket algılama için)
-- NVIDIA GPU ve sürücüleri (GPU hızlandırma için)
+- OpenCV 4.x (optional, for motion detection)
+- NVIDIA GPU and drivers (for GPU acceleration)
 
-## Kurulum
+## Installation
 
-### Bağımlılıkları Yükleme
+### Installing Dependencies
 
 ```bash
-# GStreamer ve geliştirme paketleri
+# GStreamer and development packages
 sudo apt-get update
 sudo apt-get install -y \
     libgstreamer1.0-dev \
@@ -38,67 +38,67 @@ sudo apt-get install -y \
     gstreamer1.0-tools \
     gstreamer1.0-rtsp
 
-# OpenCV (opsiyonel)
+# OpenCV (optional)
 sudo apt-get install -y libopencv-dev
 
 # YAML config parser
 sudo apt-get install -y libyaml-cpp-dev
 ```
 
-### Projeyi Derleme
+### Building the Project
 
 ```bash
-# Proje dizinine gidin
+# Navigate to the project directory
 cd GStreamerVideoAnalytics
 
-# Build dizini oluşturun
+# Create the build directory
 mkdir -p build
 cd build
 
-# CMake ile yapılandırın
+# Configure with CMake
 cmake ..
 
-# Derleyin
+# Build
 make -j$(nproc)
 ```
 
-## Kullanım
+## Usage
 
-### Temel Kullanım
+### Basic Usage
 
 ```bash
-# Video dosyası işleme
+# Process a video file
 ./gstreamer_video_analytics -i /path/to/video.mp4
 
-# Web kamerası kullanma
+# Use a webcam
 ./gstreamer_video_analytics -i webcam
 
-# RTSP stream işleme
+# Process an RTSP stream
 ./gstreamer_video_analytics -i rtsp://192.168.1.100:554/stream
 
-# RTSP server başlatma
+# Start an RTSP server
 ./gstreamer_video_analytics -i webcam -o rtsp://0.0.0.0:8554/live
 ```
 
-### Gelişmiş Özellikler
+### Advanced Features
 
 ```bash
-# Hareket algılama aktif
+# Enable motion detection
 ./gstreamer_video_analytics -i webcam --motion-detect
 
-# GPU hızlandırma kullan
+# Use GPU acceleration
 ./gstreamer_video_analytics -i video.mp4 --use-gpu
 
-# Kayıt yapma
+# Record video
 ./gstreamer_video_analytics -i rtsp://camera.local --record output.mp4
 
-# Özel konfigürasyon dosyası
+# Use a custom configuration file
 ./gstreamer_video_analytics --config config/custom_pipeline.yaml
 ```
 
-## Konfigürasyon
+## Configuration
 
-`config/pipeline_config.yaml` dosyasını düzenleyerek pipeline ayarlarını özelleştirebilirsiniz:
+You can customize pipeline settings by editing the `config/pipeline_config.yaml` file:
 
 ```yaml
 pipeline:
@@ -115,37 +115,37 @@ pipeline:
     location: "rtsp://0.0.0.0:8554/live"
 ```
 
-## Mimari
+## Architecture
 
-Proje modüler bir yapıya sahiptir:
+The project has a modular architecture:
 
-- **PipelineManager**: Ana GStreamer pipeline'ını yönetir
-- **VideoProcessor**: Video işleme ve filtre uygulamaları
-- **MotionDetector**: Hareket algılama algoritmaları
-- **RTSPStreamer**: RTSP server yönetimi
+- **PipelineManager**: Manages the main GStreamer pipeline
+- **VideoProcessor**: Video processing and filter applications
+- **MotionDetector**: Motion detection algorithms
+- **RTSPStreamer**: RTSP server management
 
-## Performans
+## Performance
 
-- 1080p@30fps video işleme (CPU)
-- 4K@60fps video işleme (GPU ile)
-- Düşük gecikme RTSP streaming (<100ms)
-- Çoklu stream desteği (sistem kaynaklarına bağlı)
+- 1080p@30fps video processing (CPU)
+- 4K@60fps video processing (with GPU)
+- Low latency RTSP streaming (<100ms)
+- Multi-stream support (depending on system resources)
 
-## Sorun Giderme
+## Troubleshooting
 
-### GStreamer elementleri bulunamıyor
+### GStreamer elements not found
 ```bash
-gst-inspect-1.0 | grep [element_adı]
+gst-inspect-1.0 | grep [element_name]
 ```
 
-### GPU hızlandırma çalışmıyor
-- NVIDIA sürücülerini kontrol edin: `nvidia-smi`
-- GStreamer NVCODEC eklentisini kontrol edin: `gst-inspect-1.0 nvcodec`
+### GPU acceleration not working
+- Check NVIDIA drivers: `nvidia-smi`
+- Check GStreamer NVCODEC plugin: `gst-inspect-1.0 nvcodec`
 
-### RTSP bağlantı sorunları
-- Firewall ayarlarını kontrol edin
-- Port 8554'ün açık olduğundan emin olun
+### RTSP connection issues
+- Check firewall settings
+- Make sure port 8554 is open
 
-## Lisans
+## License
 
-Bu proje MIT lisansı altında lisanslanmıştır.
+This project is licensed under the MIT License.

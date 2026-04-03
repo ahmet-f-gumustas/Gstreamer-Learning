@@ -1,45 +1,45 @@
-#include <gst/gst.h>  // GStreamer kütüphanesinin işlevlerini kullanmak için gerekli olan başlık dosyasını içerir
+#include <gst/gst.h>  // Includes the header file required to use GStreamer library functions
 
 
-// Bu fonksiyon, medya dosyasının oynatılması ile ilgili tüm işlemleri gerçekleştirir.
+// This function handles all operations related to playing the media file.
 int tutorial_main (int argc, char *argv[])
 {
-  GstElement *pipeline; // GStreamer elemanlarının bir araya getirildiği medya işleme zinciri (pipeline).
-  GstBus *bus; // Pipeline’ın iletişim kurduğu mesaj otobüsü.
-  GstMessage *msg; // Bus üzerinden alınan mesajlar, hata veya medya dosyasının sonlanması gibi durumlar hakkında bilgi içerir.
+  GstElement *pipeline; // The media processing chain (pipeline) where GStreamer elements are assembled.
+  GstBus *bus; // The message bus through which the pipeline communicates.
+  GstMessage *msg; // Messages received from the bus, containing information about errors or end-of-stream events.
 
 
   /* Initialize GStreamer */
-  // Bu, GStreamer kütüphanesini başlatır ve uygulamanın argümanlarını GStreamer ile entegre eder.
+  // This initializes the GStreamer library and integrates the application’s arguments with GStreamer.
   gst_init (&argc, &argv);
 
   /* Build the pipeline */
-  // GStreamer'ın bir medya dosyasını (bu örnekte bir web videosu) oynatabilmesi için kullanılan bir elementtir. Bu satır, bir web videosunu oynatmak üzere bir pipeline oluşturur.
+  // This is an element used by GStreamer to play a media file (in this example, a web video). This line creates a pipeline to play a web video.
   pipeline =
       gst_parse_launch
       ("playbin uri=https://gstreamer.freedesktop.org/data/media/sintel_trailer-480p.webm",
       NULL);
 
   /* Start playing */
-  // Pipeline'ı çalıştırır, yani medya dosyasını oynatmaya başlar.
+  // Starts the pipeline, i.e., begins playing the media file.
   gst_element_set_state (pipeline, GST_STATE_PLAYING);
 
   /* Wait until error or EOS */
-  // Bu satırlar, hata ya da EOS (End of Stream, akışın sonu) gibi mesajları bekler. 'gst_bus_timed_pop_filtered' fonksiyonu, belirtilen mesajları (hata veya EOS) almak için bekler.
+  // These lines wait for messages such as errors or EOS (End of Stream). The ‘gst_bus_timed_pop_filtered’ function waits to receive the specified messages (error or EOS).
   bus = gst_element_get_bus (pipeline);
   msg =
       gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE,
       GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
 
   /* See next tutorial for proper error message handling/parsing */
-  // Eğer alınan mesaj bir hata mesajıysa, bu satır bir hata olduğunu kullanıcıya bildirir.
+  // If the received message is an error message, this line notifies the user that an error has occurred.
   if (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_ERROR) {
     g_printerr ("An error occurred! Re-run with the GST_DEBUG=*:WARN "
         "environment variable set for more details.\n");
   }
 
   /* Free resources */
-  // Mesajı, bus'ı ve pipeline'ı temizleyerek kaynakları serbest bırakır. Pipeline'ı GST_STATE_NULL durumuna getirerek medya oynatmayı durdurur.
+  // Frees resources by cleaning up the message, bus, and pipeline. Sets the pipeline to GST_STATE_NULL to stop media playback.
   gst_message_unref (msg);
   gst_object_unref (bus);
   gst_element_set_state (pipeline, GST_STATE_NULL);

@@ -11,14 +11,14 @@ bool Utils::initializeGStreamer(int argc, char* argv[]) {
     GError* error = nullptr;
     if (!gst_init_check(&argc, &argv, &error)) {
         if (error) {
-            logError("GStreamer başlatılamadı: " + std::string(error->message));
+            logError("Failed to initialize GStreamer: " + std::string(error->message));
             g_error_free(error);
         }
         return false;
     }
     
     gstreamerInitialized = true;
-    logInfo("GStreamer başarıyla başlatıldı");
+    logInfo("GStreamer initialized successfully");
     return true;
 }
 
@@ -49,13 +49,13 @@ void Utils::printGstMessage(GstMessage* message) {
             break;
         }
         case GST_MESSAGE_EOS:
-            logInfo("Stream sonu (EOS) alındı");
+            logInfo("End of stream (EOS) received");
             break;
         case GST_MESSAGE_STATE_CHANGED: {
             GstState oldState, newState, pendingState;
             gst_message_parse_state_changed(message, &oldState, &newState, &pendingState);
             if (GST_MESSAGE_SRC(message) == GST_OBJECT(gst_element_get_parent(GST_ELEMENT(GST_MESSAGE_SRC(message))))) {
-                logInfo("Pipeline durumu değişti: " + gstStateToString(oldState) + 
+                logInfo("Pipeline state changed: " + gstStateToString(oldState) +
                        " -> " + gstStateToString(newState));
             }
             break;
@@ -80,7 +80,7 @@ void Utils::cleanupGStreamer() {
     if (gstreamerInitialized) {
         gst_deinit();
         gstreamerInitialized = false;
-        logInfo("GStreamer temizlendi");
+        logInfo("GStreamer cleaned up");
     }
 }
 
@@ -97,14 +97,14 @@ void Utils::logWarning(const std::string& message) {
 }
 
 std::string Utils::detectVideoSource() {
-    // Önce webcam kontrol et
+    // Check webcam first
     if (isWebcamAvailable()) {
-        logInfo("Webcam bulundu, video kaynağı olarak kullanılacak");
+        logInfo("Webcam found, will be used as video source");
         return "webcam";
     }
     
-    // Test pattern kullan
-    logInfo("Webcam bulunamadı, test pattern kullanılacak");
+    // Use test pattern
+    logInfo("Webcam not found, using test pattern");
     return "test";
 }
 
@@ -114,7 +114,7 @@ bool Utils::isWebcamAvailable() {
     file.close();
     
     if (!available) {
-        // v4l2-ctl ile kontrol et
+        // Check with v4l2-ctl
         int result = system("v4l2-ctl --list-devices > /dev/null 2>&1");
         available = (result == 0);
     }

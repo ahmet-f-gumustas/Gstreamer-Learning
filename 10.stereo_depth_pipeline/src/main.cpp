@@ -13,56 +13,56 @@
 #include <string>
 #include <chrono>
 
-// ─── Global durdurma bayrağı ─────────────────────────────────────────────────
+// ─── Global stop flag ────────────────────────────────────────────────────────
 static std::atomic<bool> g_stop{false};
 
 static void signalHandler(int) { g_stop = true; }
 
-// ─── Yardım mesajı ───────────────────────────────────────────────────────────
+// ─── Help message ────────────────────────────────────────────────────────────
 static void printUsage(const char* name)
 {
     std::cout
-        << "\nKullanim: " << name << " [SECENEKLER]\n\n"
-        << "Kaynak modlari:\n"
-        << "  --sim                Simulasyon (varsayilan, kamera gerekmez)\n"
-        << "  --webcam             Cift USB kamera\n"
-        << "  --file   <yol>       Video dosyasi\n\n"
-        << "Kamera secenekleri:\n"
-        << "  --left   <cihaz>     Sol kamera (varsayilan: /dev/video0)\n"
-        << "  --right  <cihaz>     Sag kamera (varsayilan: /dev/video2)\n"
-        << "  --width  <px>        Genislik (varsayilan: 640)\n"
-        << "  --height <px>        Yukseklik (varsayilan: 480)\n\n"
-        << "Derinlik secenekleri:\n"
-        << "  --sgbm               StereoSGBM kullan (daha hassas, yavas)\n"
-        << "  --focal  <px>        Odak uzunlugu piksel cinsinden (varsayilan: 554)\n"
-        << "  --base   <m>         Baseline metre cinsinden (varsayilan: 0.06)\n"
-        << "  --calib  <yaml>      Kalibrasyon dosyasi\n\n"
-        << "Engel secenekleri:\n"
-        << "  --danger  <m>        Tehlike esigi (varsayilan: 1.0 m)\n"
-        << "  --caution <m>        Dikkat esigi  (varsayilan: 3.0 m)\n\n"
-        << "Diger:\n"
-        << "  --save   <yol>       Ciktilari video olarak kaydet\n"
-        << "  -h, --help           Bu mesaji goster\n\n"
-        << "Ornekler:\n"
+        << "\nUsage: " << name << " [OPTIONS]\n\n"
+        << "Source modes:\n"
+        << "  --sim                Simulation (default, no camera needed)\n"
+        << "  --webcam             Dual USB camera\n"
+        << "  --file   <path>      Video file\n\n"
+        << "Camera options:\n"
+        << "  --left   <device>    Left camera (default: /dev/video0)\n"
+        << "  --right  <device>    Right camera (default: /dev/video2)\n"
+        << "  --width  <px>        Width (default: 640)\n"
+        << "  --height <px>        Height (default: 480)\n\n"
+        << "Depth options:\n"
+        << "  --sgbm               Use StereoSGBM (more accurate, slower)\n"
+        << "  --focal  <px>        Focal length in pixels (default: 554)\n"
+        << "  --base   <m>         Baseline in meters (default: 0.06)\n"
+        << "  --calib  <yaml>      Calibration file\n\n"
+        << "Obstacle options:\n"
+        << "  --danger  <m>        Danger threshold (default: 1.0 m)\n"
+        << "  --caution <m>        Caution threshold (default: 3.0 m)\n\n"
+        << "Other:\n"
+        << "  --save   <path>      Save output as video\n"
+        << "  -h, --help           Show this message\n\n"
+        << "Examples:\n"
         << "  " << name << " --sim\n"
         << "  " << name << " --webcam --left /dev/video0 --right /dev/video2\n"
         << "  " << name << " --file video.mp4 --sgbm\n";
 }
 
-// ─── Pencere düzeni ──────────────────────────────────────────────────────────
+// ─── Window layout ───────────────────────────────────────────────────────────
 static cv::Mat buildDisplay(const cv::Mat& left,
                             const cv::Mat& right,
                             const cv::Mat& colorDepth,
                             const cv::Mat& overlay)
 {
-    // Her görüntüyü aynı boyuta getir
+    // Resize every image to the same size
     cv::Size sz = left.size();
     cv::Mat rR, rCD, rOV;
     cv::resize(right,      rR,  sz);
     cv::resize(colorDepth, rCD, sz);
     cv::resize(overlay,    rOV, sz);
 
-    // Etiket ekle
+    // Add labels
     auto label = [](cv::Mat& img, const std::string& txt) {
         cv::rectangle(img, cv::Rect(0, 0, img.cols, 22), cv::Scalar(20,20,20), cv::FILLED);
         cv::putText(img, txt, cv::Point(4, 16),
@@ -70,10 +70,10 @@ static cv::Mat buildDisplay(const cv::Mat& left,
     };
 
     cv::Mat L = left.clone(), R = rR.clone(), D = rCD.clone(), O = rOV.clone();
-    label(L, "Sol Kamera");
-    label(R, "Sag Kamera");
-    label(D, "Derinlik Haritasi  (kirmizi=yakin, mavi=uzak)");
-    label(O, "Engel Analizi");
+    label(L, "Left Camera");
+    label(R, "Right Camera");
+    label(D, "Depth Map  (red=near, blue=far)");
+    label(O, "Obstacle Analysis");
 
     cv::Mat top, bot, full;
     cv::hconcat(L, R,   top);
@@ -82,7 +82,7 @@ static cv::Mat buildDisplay(const cv::Mat& left,
     return full;
 }
 
-// ─── FPS hesaplayıcı ─────────────────────────────────────────────────────────
+// ─── FPS counter ─────────────────────────────────────────────────────────────
 class FpsCounter {
     std::chrono::steady_clock::time_point t0_ = std::chrono::steady_clock::now();
     int frames_ = 0;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
 
     gst_init(&argc, &argv);
 
-    // ── Argüman ayrıştırma ────────────────────────────────────────────────────
+    // ── Argument parsing ──────────────────────────────────────────────────────
     StereoPipeline::SourceMode mode = StereoPipeline::SourceMode::SIMULATION;
     std::string leftSrc  = "/dev/video0";
     std::string rightSrc = "/dev/video2";
@@ -146,14 +146,14 @@ int main(int argc, char* argv[])
         else if (a == "--save")               savePath  = next();
         else if (a == "--sgbm")               useSGBM  = true;
         else if (a == "-h" || a == "--help") { printUsage(argv[0]); return 0; }
-        else std::cerr << "[main] Bilinmeyen arguman: " << a << "\n";
+        else std::cerr << "[main] Unknown argument: " << a << "\n";
     }
 
-    // ── Bileşen başlatma ─────────────────────────────────────────────────────
+    // ── Component initialization ───────────────────────────────────────────────
     StereoPipeline pipeline;
     std::string src = (mode == StereoPipeline::SourceMode::VIDEO_FILE) ? filePath : leftSrc;
     if (!pipeline.initialize(mode, src, rightSrc, width, height)) {
-        std::cerr << "[main] Pipeline baslatilamadi!\n";
+        std::cerr << "[main] Pipeline could not be initialized!\n";
         gst_deinit();
         return 1;
     }
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
     depth.setFocalLength(focal);
     depth.setBaseline(base);
 
-    // Simülasyon modunda yapay sağ görüntü üret
+    // In simulation mode, generate artificial right image
     if (mode == StereoPipeline::SourceMode::SIMULATION)
         depth.setSim(true, /*shift_px=*/30);
 
@@ -173,11 +173,11 @@ int main(int argc, char* argv[])
 
     ObstacleDetector detector(danger, caution, /*rows=*/3, /*cols=*/4);
 
-    // Video kayıt
+    // Video recording
     cv::VideoWriter writer;
     bool doSave = !savePath.empty();
 
-    // ── Pipeline başlat ───────────────────────────────────────────────────────
+    // ── Start pipeline ────────────────────────────────────────────────────────
     pipeline.start();
 
     cv::namedWindow("Stereo Depth Pipeline", cv::WINDOW_NORMAL);
@@ -187,33 +187,33 @@ int main(int argc, char* argv[])
     StereoFrame frame;
     int frameIdx = 0;
 
-    std::cout << "\n[main] Calistirildi. Cikis icin 'q' veya Ctrl+C\n";
-    std::cout << "[main] Mod: "
-              << (mode == StereoPipeline::SourceMode::SIMULATION ? "Simulasyon" :
-                  mode == StereoPipeline::SourceMode::DUAL_WEBCAM ? "Cift Webcam" : "Video Dosyasi")
+    std::cout << "\n[main] Running. Press 'q' or Ctrl+C to exit\n";
+    std::cout << "[main] Mode: "
+              << (mode == StereoPipeline::SourceMode::SIMULATION ? "Simulation" :
+                  mode == StereoPipeline::SourceMode::DUAL_WEBCAM ? "Dual Webcam" : "Video File")
               << "  Algo: " << (useSGBM ? "SGBM" : "BM")
               << "  f=" << focal << "px  B=" << base * 100.f << "cm\n\n";
 
-    // ── Ana döngü ─────────────────────────────────────────────────────────────
+    // ── Main loop ─────────────────────────────────────────────────────────────
     while (!g_stop && pipeline.isRunning()) {
 
         if (!pipeline.getFrame(frame)) {
-            // Timeout – bus mesajlarını kontrol et
+            // Timeout – check bus messages
             continue;
         }
 
-        // Derinlik hesabı
+        // Depth computation
         DepthResult depth_r = depth.compute(frame.left, frame.right);
         if (!depth_r.valid) continue;
 
-        // Engel analizi
+        // Obstacle analysis
         ObstacleResult obs = detector.analyze(depth_r.depthMap, frame.left);
 
-        // Ekran görüntüsü
+        // Display image
         cv::Mat display = buildDisplay(frame.left, frame.right,
                                        depth_r.colorDepth, obs.overlay);
 
-        // FPS göster
+        // Show FPS
         float f = fps.tick();
         if (f > 0.f) {
             std::ostringstream fpsStr;
@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
 
         cv::imshow("Stereo Depth Pipeline", display);
 
-        // Video kayıt
+        // Video recording
         if (doSave) {
             if (!writer.isOpened())
                 writer.open(savePath, cv::VideoWriter::fourcc('M','J','P','G'),
@@ -233,17 +233,17 @@ int main(int argc, char* argv[])
             writer.write(display);
         }
 
-        // Terminal çıktısı (her 30 frame'de bir)
+        // Terminal output (every 30 frames)
         if (++frameIdx % 30 == 0) {
             std::cout << "[Frame " << frameIdx << "] "
                       << "Min: " << std::fixed << std::setprecision(2) << depth_r.minDepthM << "m  "
                       << "Max: " << depth_r.maxDepthM << "m  "
-                      << "En yakin engel: " << obs.closestM << "m  "
-                      << "Durum: ";
+                      << "Closest obstacle: " << obs.closestM << "m  "
+                      << "Status: ";
             switch (obs.overallDanger) {
-                case DangerLevel::DANGER:  std::cout << "TEHLIKE\n"; break;
-                case DangerLevel::CAUTION: std::cout << "DIKKAT\n";  break;
-                default:                   std::cout << "GUVENLI\n"; break;
+                case DangerLevel::DANGER:  std::cout << "DANGER\n"; break;
+                case DangerLevel::CAUTION: std::cout << "CAUTION\n";  break;
+                default:                   std::cout << "SAFE\n"; break;
             }
         }
 
@@ -251,12 +251,12 @@ int main(int argc, char* argv[])
         if (key == 'q' || key == 'Q' || key == 27) g_stop = true;
     }
 
-    // ── Temizlik ─────────────────────────────────────────────────────────────
+    // ── Cleanup ──────────────────────────────────────────────────────────────
     pipeline.stop();
     if (writer.isOpened()) writer.release();
     cv::destroyAllWindows();
     gst_deinit();
 
-    std::cout << "[main] Program sonlandi. Toplam frame: " << frameIdx << "\n";
+    std::cout << "[main] Program terminated. Total frames: " << frameIdx << "\n";
     return 0;
 }
