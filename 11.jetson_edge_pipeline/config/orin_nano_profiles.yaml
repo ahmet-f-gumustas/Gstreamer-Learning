@@ -1,0 +1,53 @@
+# Orin Nano 8GB güç profilleri.  OrinSimulator bunlardan birine göre
+# x86 ölçümlerini scale eder.  Gerçek Jetson'da `sudo nvpmodel -m <id>`
+# komutu aynı profile geçer.
+
+profiles:
+  - name:        "7W"
+    nvpmodel_id: 1
+    desc:        "Düşük güç — fanless / battery powered uygulamalar"
+    int8_tops:   20.0
+    fp16_tflops: 5.0
+    gpu_clock_mhz:  408
+    cpu_clock_mhz:  1190
+    cpu_cores:      6
+    mem_bw_gb:      68
+    tdp_watts:      7
+
+  - name:        "15W"
+    nvpmodel_id: 0
+    desc:        "Default mode — en iyi performans/güç dengesi"
+    int8_tops:   40.0
+    fp16_tflops: 10.0
+    gpu_clock_mhz:  624
+    cpu_clock_mhz:  1510
+    cpu_cores:      6
+    mem_bw_gb:      68
+    tdp_watts:      15
+
+  - name:        "MAXN"
+    nvpmodel_id: 2
+    desc:        "Maksimum frekans, termal limitli"
+    int8_tops:   50.0
+    fp16_tflops: 12.5
+    gpu_clock_mhz:  918
+    cpu_clock_mhz:  1700
+    cpu_cores:      6
+    mem_bw_gb:      68
+    tdp_watts:      20
+
+# YOLOv8n için public benchmark verileri (NVIDIA Jetson blog, 2024 Q1).
+# Simülatör tahminleri ile karşılaştırma referansı.
+reference_benchmarks:
+  yolov8n_640_fp16:
+    "7W":  18
+    "15W": 30
+    "MAXN":45
+  yolov8n_640_int8:
+    "7W":  28
+    "15W": 45
+    "MAXN":62
+  yolov8s_640_fp16:
+    "7W":  9
+    "15W": 17
+    "MAXN":24

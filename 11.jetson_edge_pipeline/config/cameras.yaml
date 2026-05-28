@@ -1,0 +1,58 @@
+# 4 kamera tipinin örnek konfigürasyonları.
+# Pipeline.yaml içindeki "camera:" bloğunu bu örneklerden biriyle değiştirin.
+
+# ─── USB / UVC ───────────────────────────────────────────────────────────────
+# Logitech C920, Razer Kiyo, vs.  En yaygın geliştirme senaryosu.
+usb_logitech:
+  type: usb
+  node: /dev/video0
+  width: 1920
+  height: 1080
+  framerate: 30
+  format: BGR
+  notes: |
+    v4l2-ctl --list-formats-ext -d /dev/video0 ile destekleneni gör.
+    Bazı kameralar 1080p30'u sadece MJPG ile veriyor — format: MJPG yap.
+
+# ─── CSI (Jetson native) ─────────────────────────────────────────────────────
+# IMX219 (Pi Cam v2), IMX477 (Pi HQ), IMX708, IMX415, vs.
+csi_imx219:
+  type: csi
+  node: "0"                   # sensor-id
+  width: 1920
+  height: 1080
+  framerate: 30
+  format: BGR
+  notes: |
+    Sadece Jetson host'ta çalışır. nvarguscamerasrc NVMM NV12 üretir;
+    rest of pipeline zero-copy için nvvidconv ile NVMM'de tutulmalı.
+
+# ─── GMSL (otomotiv / endüstriyel) ───────────────────────────────────────────
+# Leopard Imaging LI-USB30-IMX390, e-con NileCAM81, D3 Engineering DesignCore.
+gmsl_imx390:
+  type: gmsl
+  node: /dev/video0
+  width: 1920
+  height: 1080
+  framerate: 30
+  format: BGR
+  variant: yuv_direct         # yuv_direct | raw_bayer
+  notes: |
+    MAX9296/MAX96712 deserializer ve sensör driver yüklenmiş olmalı.
+    `lsmod | grep max96` ile kontrol et. Raw Bayer ise variant: raw_bayer
+    yap (Jetson ISP'si gerekir).
+
+# ─── GigE Vision (endüstriyel) ───────────────────────────────────────────────
+# Basler ace, FLIR Blackfly S, Allied Vision Mako.
+gige_basler:
+  type: gige
+  node: "Basler-acA1920-40uc-12345"   # boş => ilk bulunan
+  width: 1920
+  height: 1080
+  framerate: 30
+  format: BGR
+  packet_size: 8192            # jumbo frame; switch desteklemeli
+  auto_exposure: true
+  notes: |
+    `sudo apt install libaravis-0.8-bin` sonrası `arv-tool-0.8` ile
+    kameranın MAC + IP'sini gör. Aynı subnet'te olmalı.
