@@ -22,7 +22,7 @@
 
 ## Hakkinda
 
-Bu repo, GStreamer multimedia framework'unu ogrenme surecinde gelistirdigim projeleri icerir. Basit Python/C orneklerinden baslayarak, stereo derinlik tahmini ve GPU-hizlandirilmis nesne tespitine kadar uzanan 11 proje bulunmaktadir.
+Bu repo, GStreamer multimedia framework'unu ogrenme surecinde gelistirdigim projeleri icerir. Basit Python/C orneklerinden baslayarak, stereo derinlik tahmini, GPU-hizlandirilmis nesne tespiti ve Jetson edge deployment'a kadar uzanan 12 proje bulunmaktadir.
 
 > **Not:** [GSt_Note_.md](GSt_Note_.md) dosyasi GStreamer hakkinda **Turkce ogrenme notlari** olarak kullanilmaktadir. Pipeline, element, pad, bus gibi temel kavramlarin aciklamalarini icerir. Proje kaynak kodlari ise asagidaki klasorlerde ayri ayri degerlendirilmelidir.
 
@@ -43,6 +43,7 @@ Bu repo, GStreamer multimedia framework'unu ogrenme surecinde gelistirdigim proj
 | **08** | [Video Mosaic Creator](08.video_mosaic_creator/) | Coklu kaynak video mozaik birlestirici (2-16 kaynak) | C++ | GStreamer Compositor, YAML-CPP |
 | **09** | [Video Frame Extractor](09.video_frame_extractor/) | Akilli kare cikarma araci (interval, keyframe, time-based) | C++ | OpenCV, appsink |
 | **10** | [Stereo Depth Pipeline](10.stereo_depth_pipeline/) | Stereo goruntu ile derinlik tahmini ve engel tespiti | C++ | StereoBM/SGBM, OpenCV, V4L2 |
+| **11** | [Jetson Edge Pipeline](11.jetson_edge_pipeline/) | Orin Nano edge AI (4 kamera + ByteTrack + INT8 + simulator) | C++ | TensorRT, ByteTrack, Aravis, QEMU cross-compile |
 
 ---
 
@@ -55,6 +56,7 @@ Temel                          Orta Seviye                         Ileri Seviye
 01. C Tutorials (x7)     ──>   04. Optical Flow (OpenCV)     ──>  07. Video Analytics Framework
 02. Media Player (C++)   ──>   05. RTSP Streaming            ──>  08. Video Mosaic (Multi-source)
                                09. Frame Extractor           ──>  10. Stereo Depth (Robotik)
+                                                              ──>  11. Jetson Edge (Production)
 ```
 
 ---

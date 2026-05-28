@@ -24,7 +24,7 @@
 
 ## About
 
-This repo contains projects developed during my learning journey with the GStreamer multimedia framework. Starting from simple Python/C examples, it includes 11 projects spanning up to stereo depth estimation and GPU-accelerated object detection.
+This repo contains projects developed during my learning journey with the GStreamer multimedia framework. Starting from simple Python/C examples, it includes 12 projects spanning up to stereo depth estimation, GPU-accelerated object detection, and Jetson edge deployment.
 
 > **Note:** The [GSt_Note_en.md](GSt_Note_en.md) file serves as **English learning notes** about GStreamer (Turkish version: [GSt_Note_tr.md](GSt_Note_tr.md)). It contains explanations of core concepts such as pipeline, element, pad, and bus. The project source codes should be evaluated separately in the folders listed below.
 
@@ -45,6 +45,7 @@ This repo contains projects developed during my learning journey with the GStrea
 | **08** | [Video Mosaic Creator](08.video_mosaic_creator/) | Multi-source video mosaic combiner (2-16 sources) | C++ | GStreamer Compositor, YAML-CPP |
 | **09** | [Video Frame Extractor](09.video_frame_extractor/) | Smart frame extraction tool (interval, keyframe, time-based) | C++ | OpenCV, appsink |
 | **10** | [Stereo Depth Pipeline](10.stereo_depth_pipeline/) | Depth estimation and obstacle detection with stereo vision | C++ | StereoBM/SGBM, OpenCV, V4L2 |
+| **11** | [Jetson Edge Pipeline](11.jetson_edge_pipeline/) | Orin Nano edge AI (4 cameras + ByteTrack + INT8 + simulator) | C++ | TensorRT, ByteTrack, Aravis, QEMU cross-compile |
 
 ---
 
@@ -57,6 +58,7 @@ Beginner                       Intermediate                    Advanced
 01. C Tutorials (x7)     ──>   04. Optical Flow (OpenCV)     ──>  07. Video Analytics Framework
 02. Media Player (C++)   ──>   05. RTSP Streaming            ──>  08. Video Mosaic (Multi-source)
                                09. Frame Extractor           ──>  10. Stereo Depth (Robotics)
+                                                              ──>  11. Jetson Edge (Production)
 ```
 
 ---
@@ -181,6 +183,16 @@ Stereo vision system for robotics applications:
 - 4-panel real-time visualization
 - ROS2 integration example
 
+### 11 - Jetson Edge Pipeline (C++)
+Production-style edge AI pipeline targeting NVIDIA Jetson Orin Nano 8GB,
+developed entirely on x86 with a transparent simulation layer:
+- **4 camera backends** behind one abstraction (USB / CSI / GMSL / GigE Vision)
+- **TensorRT** engine with FP32 / FP16 / **INT8** (`IInt8EntropyCalibrator2`)
+- **ByteTrack** multi-object tracker — Kalman + Hungarian, pure C++
+- **OrinSimulator** scales x86 measurements to Orin Nano 7W / 15W / MAXN
+- `tegrastats` parser, CSV/JSON perf logging, x86-vs-Jetson comparison report
+- QEMU cross-compile + `scp` deploy + systemd unit + Docker (dev + L4T)
+
 ---
 
 ## Project Structure
@@ -206,6 +218,14 @@ Gstreamer-Learning/
 ├── 08.video_mosaic_creator/        # Mosaic combiner
 ├── 09.video_frame_extractor/       # Frame extractor
 ├── 10.stereo_depth_pipeline/       # Stereo depth
+├── 11.jetson_edge_pipeline/        # Jetson Orin Nano edge AI
+│   ├── include/{camera,inference,tracking,monitoring}/
+│   ├── src/                        # mirror of include/
+│   ├── config/                     # pipeline.yaml, cameras.yaml, profiles
+│   ├── scripts/                    # setup, build, benchmark, deploy
+│   ├── docker/                     # Dockerfile.dev + Dockerfile.l4t
+│   ├── tests/                      # 5 assert-based unit tests
+│   └── docs/                       # 5 design documents
 ├── data/                           # Logos and images
 ├── GSt_Note_en.md                  # GStreamer English learning notes
 ├── GSt_Note_tr.md                  # GStreamer Turkish learning notes
